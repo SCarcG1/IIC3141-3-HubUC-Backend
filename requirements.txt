@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
-psycopg2-binary
 asyncpg
 alembic
 python-dotenv
