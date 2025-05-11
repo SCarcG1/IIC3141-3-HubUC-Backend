@@ -1,0 +1,8 @@
+.env
+/.idea
+/app/__pycache__
+/app/api/__pycache__
+/app/api/__pycache__
+app/api/__pycache__/routes.cpython-311.pyc
+app/api/__pycache__/routes.cpython-311.pyc
+app/schemas/__pycache__/user.cpython-311.pyc
