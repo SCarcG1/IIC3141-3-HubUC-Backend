@@ -1,17 +1,23 @@
-from sqlalchemy import Column, Integer, String, Enum
 from app.database import Base
-import enum
+from enum import Enum as PythonEnum
+from sqlalchemy import String, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-class UserRole(str, enum.Enum):
+
+class UserRole(str, PythonEnum):
     student = "student"
     tutor = "tutor"
     admin = "admin"
 
-class User(Base):
-    __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    password = Column(String)
-    name = Column(String)
-    role = Column(Enum(UserRole), default=UserRole.student)
+class User(Base):
+    __tablename__ = "user"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    password: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.student)
+
+    private_classes = relationship("privateclass", back_populates="tutor")
+    reservations = relationship("reservation", back_populates="student")

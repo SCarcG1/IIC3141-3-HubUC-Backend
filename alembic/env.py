@@ -1,9 +1,11 @@
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-import os
 from app.database import Base
-from app.models import user
+import os
+
+# Add all models to the following import:
+from app.models import course, private_class, reservation, review, user
 
 config = context.config
 fileConfig(config.config_file_name)

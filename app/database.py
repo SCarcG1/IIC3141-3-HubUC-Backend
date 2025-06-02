@@ -1,6 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import os
 from dotenv import load_dotenv
 import asyncio
@@ -11,10 +10,16 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    '''
+    `Base = declarative_base()` is superseded by `class Base(DeclarativeBase)` in SQLAlchemy 2.0.
+    '''
+    pass
 
 async def init_db():
-    import app.models.user
+    # Add all models to the following import:
+    from app.models import course, private_class, reservation, review, user
 
     max_retries = 10
     retry_delay = 2  # segundos
