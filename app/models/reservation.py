@@ -22,3 +22,5 @@ class Reservation(Base):
     private_class = relationship("privateclass", back_populates="reservations")
 
     status: Mapped[ReservationStatus] = mapped_column(Enum(ReservationStatus))
+
+    review = relationship("review", back_populates="reservation")

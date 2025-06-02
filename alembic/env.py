@@ -5,7 +5,7 @@ from app.database import Base
 import os
 
 # Add all models to the following import:
-from app.models import course, private_class, reservation, user
+from app.models import course, private_class, reservation, review, user
 
 config = context.config
 fileConfig(config.config_file_name)
