@@ -108,60 +108,71 @@ class TestModels(TestCase):
             retrieved_reservation = session.get(Reservation, reservation.id)
         self.assertIsNotNone(retrieved_reservation)
 
-    # def test_review_creation_in_database(self):
-    #     course = Course(
-    #         name="Test Course",
-    #         description="Description."
-    #     )
-    #     student = User(
-    #         email="student@example.com",
-    #         password="password",
-    #         name="Student Name",
-    #         role="student"
-    #     )
-    #     tutor = User(
-    #         email="tutor@example.com",
-    #         password="password",
-    #         name="Tutor Name",
-    #         role="tutor"
-    #     )
-    #     lesson = PrivateLesson(
-    #         tutor_id=tutor.id,
-    #         course_id=course.id,
-    #         start_time=datetime.now(),
-    #         end_time=datetime.now() + timedelta(hours=1),
-    #         price=10000
-    #     )
-    #     reservation = Reservation(
-    #         student_id=student.id,
-    #         private_lesson_id=lesson.id,
-    #         status="accepted"
-    #     )
-    #     review = Review(
-    #         reservation_id=reservation.id,
-    #         content="Lorem ipsum dolor sit amet.",
-    #         rating=5
-    #     )
-    #     query = select(Review).where(Review.reservation_id == reservation.id)
-    #     with Session(self.engine) as session:
-    #         session.add_all([course, student, tutor, lesson, reservation, review])
-    #         session.commit()
-    #         result = session.execute(query)
-    #     retrieved_review = result.scalar_one_or_none()
-    #     self.assertIsNotNone(retrieved_review)
+    def test_review_creation_in_database(self):
+        course = Course(
+            name="Test Course",
+            description="Description."
+        )
+        student = User(
+            email="student@example.com",
+            password="password",
+            name="Student Name",
+            role="student"
+        )
+        tutor = User(
+            email="tutor@example.com",
+            password="password",
+            name="Tutor Name",
+            role="tutor"
+        )
+        with Session(self.engine) as session:
+            session.add_all([course, student, tutor])
+            session.commit()
+            course = session.get(Course, course.id)
+            student = session.get(User, student.id)
+            tutor = session.get(User, tutor.id)
+        lesson = PrivateLesson(
+            tutor_id=tutor.id,
+            course_id=course.id,
+            start_time=datetime.now(),
+            end_time=datetime.now() + timedelta(hours=1),
+            price=10000
+        )
+        with Session(self.engine) as session:
+            session.add(lesson)
+            session.commit()
+            lesson = session.get(PrivateLesson, lesson.id)
+        reservation = Reservation(
+            student_id=student.id,
+            private_lesson_id=lesson.id,
+            status="accepted"
+        )
+        with Session(self.engine) as session:
+            session.add(reservation)
+            session.commit()
+            reservation = session.get(Reservation, reservation.id)
+        review = Review(
+            reservation_id=reservation.id,
+            content="Lorem ipsum dolor sit amet.",
+            rating=5
+        )
+        retrieved_review = None
+        with Session(self.engine) as session:
+            session.add(review)
+            session.commit()
+            retrieved_review = session.get(Review, review.id)
+        self.assertIsNotNone(retrieved_review)
 
-    # def test_user_creation_in_database(self):
-    #     expected_name = "Test User"
-    #     user = User(
-    #         email="example@example.com",
-    #         password="password",
-    #         name=expected_name,
-    #         role="student"
-    #     )
-    #     query = select(User).where(User.name == expected_name)
-    #     with Session(self.engine) as session:
-    #         session.add(user)
-    #         session.commit()
-    #         result = session.execute(query)
-    #     retrieved_user = result.scalar_one_or_none()
-    #     self.assertIsNotNone(retrieved_user)
+    def test_user_creation_in_database(self):
+        user = User(
+            email="example@example.com",
+            password="password",
+            name="Steve",
+            role="student"
+        )
+        retrieved_user = None
+        with Session(self.engine) as session:
+            session.add(user)
+            session.commit()
+            retrieved_user = session.get(User, user.id)
+        self.assertIsNotNone(retrieved_user)
