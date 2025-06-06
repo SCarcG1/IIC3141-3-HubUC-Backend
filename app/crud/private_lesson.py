@@ -12,7 +12,16 @@ async def get_private_lesson_by_id(db: AsyncSession, lesson_id: int):
     return result.scalar_one_or_none()
 
 async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
-    db_lesson = PrivateLesson(**lesson.dict())
+    start = lesson.start_time.replace(tzinfo=None)
+    end = lesson.end_time.replace(tzinfo=None)
+
+    db_lesson = PrivateLesson(
+        tutor_id=lesson.tutor_id,
+        course_id=lesson.course_id,
+        start_time=start,
+        end_time=end,
+        price=lesson.price
+    )
     db.add(db_lesson)
     await db.commit()
     await db.refresh(db_lesson)
