@@ -16,9 +16,9 @@ class PrivateLesson(Base):
     course = relationship("Course", back_populates="private_lessons")
 
     start_time: Mapped[datetime] = mapped_column(DateTime)
-    
+
     end_time: Mapped[datetime] = mapped_column(DateTime)
-    
+
     price: Mapped[int] = mapped_column()
 
     reservations = relationship("Reservation", back_populates="private_lesson")

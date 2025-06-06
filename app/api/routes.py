@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Any, Optional
 
 from app.database import SessionLocal
 from app.schemas.user import UserCreate, UserLogin, UserOut
@@ -93,6 +93,22 @@ async def update_lesson(lesson_id: int, lesson: PrivateLessonUpdate, db: AsyncSe
     if not updated:
         raise HTTPException(status_code=404, detail="Private lesson not found")
     return updated
+
+@router.get("/private-lessons/search", response_model=dict)
+async def search_private_lessons(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    course_id: Optional[int] = None,
+    tutor_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
+    return await get_filtered_private_lessons_paginated(
+        db=db,
+        page=page,
+        page_size=page_size,
+        course_id=course_id,
+        tutor_id=tutor_id
+    )
 
 ######## Course Routes ########
 @router.get("/courses", response_model=List[CourseOut])
