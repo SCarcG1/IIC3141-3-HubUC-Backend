@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel
+from typing import Optional
 
 class PrivateLessonBase(BaseModel):
     tutor_id: int
@@ -16,3 +17,13 @@ class PrivateLessonOut(PrivateLessonBase):
 
 class PrivateLessonCreate(PrivateLessonBase):
     pass
+
+class PrivateLessonUpdate(BaseModel):
+    tutor_id: Optional[int]
+    course_id: Optional[int]
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+    price: Optional[int]
+
+    class Config:
+        orm_mode = True
