@@ -26,3 +26,24 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     await db.commit()
     await db.refresh(db_lesson)
     return db_lesson
+
+async def delete_private_lesson(db: AsyncSession, lesson_id: int):
+    db_lesson = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
+    if db_lesson is None:
+        return None
+    await db.delete(db_lesson)
+    await db.commit()
+    return db_lesson
+
+async def update_private_lesson(db: AsyncSession, lesson_id: int, lesson: PrivateLessonCreate):
+    result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
+    db_lesson = result.scalar_one_or_none()
+    if not db_lesson:
+        return None
+    
+    for key, value in lesson.dict(exclude_unset=True).items():
+        setattr(db_lesson, key, value)  
+
+    await db.commit()
+    await db.refresh(db_lesson)
+    return db_lesson
