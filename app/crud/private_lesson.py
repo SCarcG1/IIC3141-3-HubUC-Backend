@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.private_lesson import PrivateLesson
+from app.schemas.private_lesson import PrivateLessonCreate
 
 async def get_all_private_lessons(db: AsyncSession):
     result = await db.execute(select(PrivateLesson))
