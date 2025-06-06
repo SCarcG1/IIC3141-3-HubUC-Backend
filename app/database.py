@@ -36,3 +36,4 @@ async def init_db():
                 print("❌ No se pudo conectar a la base de datos después de varios intentos.")
                 raise
             await asyncio.sleep(retry_delay)
+async_session = SessionLocal
