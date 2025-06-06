@@ -9,7 +9,7 @@ class Review(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     reservation_id: Mapped[int] = mapped_column(ForeignKey("reservation.id"))
-    reservation = relationship("reservation", back_populates="review")
+    reservation = relationship("Reservation", back_populates="review")
     
     content: Mapped[str] = mapped_column(Text)
     
