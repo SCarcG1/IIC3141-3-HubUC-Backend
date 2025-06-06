@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Any, Optional
 
 from app.database import SessionLocal
 from app.schemas.user import UserCreate, UserLogin, UserOut
