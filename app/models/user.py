@@ -19,5 +19,5 @@ class User(Base):
     name: Mapped[str] = mapped_column(String)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.student)
 
-    private_lessons = relationship("privatelesson", back_populates="tutor")
-    reservations = relationship("reservation", back_populates="student")
+    private_lessons = relationship("PrivateLesson", back_populates="tutor")
+    reservations = relationship("Reservation", back_populates="student")
