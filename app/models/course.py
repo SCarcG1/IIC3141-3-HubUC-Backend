@@ -9,4 +9,4 @@ class Course(Base):
     name: Mapped[str] = mapped_column(String(100))
     description: Mapped[str] = mapped_column(Text)
 
-    private_classes = relationship("privateclass", back_populates="course")
+    private_lessons = relationship("privatelesson", back_populates="course")

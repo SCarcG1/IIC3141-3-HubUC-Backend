@@ -18,8 +18,8 @@ class Reservation(Base):
     student_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     student = relationship("user", back_populates="reservations")
 
-    private_class_id: Mapped[int] = mapped_column(ForeignKey("privateclass.id"))
-    private_class = relationship("privateclass", back_populates="reservations")
+    private_lesson_id: Mapped[int] = mapped_column(ForeignKey("privatelesson.id"))
+    private_lesson = relationship("privatelesson", back_populates="reservations")
 
     status: Mapped[ReservationStatus] = mapped_column(Enum(ReservationStatus))
 
