@@ -7,7 +7,7 @@ from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.crud.user import create_user, get_user_by_email
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
-from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson
+from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, delete_private_lesson, update_private_lesson
 from app.schemas.private_lesson import PrivateLessonOut, PrivateLessonCreate
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
@@ -75,9 +75,24 @@ async def read_private_lesson_by_id(lesson_id: int, db: AsyncSession = Depends(g
     if not lesson:
         raise HTTPException(status_code=404, detail="Private lesson not found")
     return lesson
+
 @router.post("/private-lessons", response_model=PrivateLessonOut, dependencies=[Depends(JWTBearer())])
 async def create_lesson(lesson: PrivateLessonCreate, db: AsyncSession = Depends(get_db)):
     return await create_private_lesson(db, lesson)
+
+@router.delete("/private-lessons/{lesson_id}", dependencies=[Depends(JWTBearer())])
+async def delete_lesson(lesson_id: int, db: AsyncSession = Depends(get_db)):
+    deleted = await delete_private_lesson(db, lesson_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Private lesson not found")
+    return {"detail": f"Private lesson {lesson_id} deleted"}
+
+# @router.put("/private-lessons/{lesson_id}", response_model=PrivateLessonOut, dependencies=[Depends(JWTBearer())])
+# async def update_lesson(lesson_id: int, lesson: PrivateLessonCreate, db: AsyncSession = Depends(get_db)):
+#     updated = await update_private_lesson(db, lesson_id, lesson)
+#     if not updated:
+#         raise HTTPException(status_code=404, detail="Private lesson not found")
+#     return updated
 
 ######## Course Routes ########
 @router.get("/courses", response_model=List[CourseOut])
