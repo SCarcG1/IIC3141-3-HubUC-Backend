@@ -11,3 +11,5 @@ pydantic[email]
 coverage
 aiosqlite
 httpx
+commitizen
+pre-commit
