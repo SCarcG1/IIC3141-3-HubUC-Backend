@@ -4,7 +4,7 @@ from typing import List, Any, Optional
 
 from app.database import SessionLocal
 from app.schemas.user import UserCreate, UserLogin, UserOut
-from app.crud.user import create_user, get_user_by_email
+from app.crud.user import create_user, get_user_by_email, get_user_by_id
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
 from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, \
@@ -188,4 +188,11 @@ async def delete_reservation_endpoint(reservation_id: int, db: AsyncSession = De
     if not deleted:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return {"detail": f"Reservation {reservation_id} deleted"}
+
+######## User Routes ########
+
+@router.get("/user", response_model=UserOut, dependencies=[Depends(JWTBearer())])
+async def read_user(db: AsyncSession = Depends(get_db), token: dict = Depends(JWTBearer())):
+    return await get_user_by_id(db, token["id"])
+
 
