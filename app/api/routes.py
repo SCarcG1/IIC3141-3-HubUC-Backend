@@ -29,13 +29,23 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return await create_user(db, user)
 
+
 @router.post("/login")
 async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):
     db_user = await get_user_by_email(db, user.email)
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
     token = create_access_token({"sub": db_user.email, "role": db_user.role, "id": db_user.id})
-    return {"access_token": token}
+    return {
+        "access_token": token,
+        "user": {
+            "id": db_user.id,
+            "email": db_user.email,
+            "name": db_user.name,
+            "role": db_user.role
+        }
+    }
 
 @router.get("/users/{user_id}", response_model=UserOut)
 async def read_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
