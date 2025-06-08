@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.database import SessionLocal
 from app.schemas.user import UserCreate, UserLogin, UserOut
-from app.crud.user import create_user, get_user_by_email
+from app.crud.user import create_user, get_user_by_email, get_user_by_id
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
@@ -36,6 +36,13 @@ async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": db_user.email, "role": db_user.role, "id": db_user.id})
     return {"access_token": token}
+
+@router.get("/users/{user_id}", response_model=UserOut)
+async def read_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 @router.get("/protected-route")
 async def protected(data=Depends(JWTBearer())):
