@@ -1,16 +1,13 @@
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from app.database import Base, async_session
+from app.database import Base
 import os
 
-from app.models import course, private_lesson, reservation, review, user
-
-from app.seeds.seed import seed_data
+from app.models import course, private_lesson, reservation, review, user  # Importa modelos
 
 config = context.config
 fileConfig(config.config_file_name)
-
 target_metadata = Base.metadata
 
 def run_migrations_offline():
@@ -23,6 +20,8 @@ def run_migrations_offline():
 
 def run_migrations_online():
     from sqlalchemy.ext.asyncio import create_async_engine
+    import asyncio
+
     url = os.getenv("DATABASE_URL")
     connectable = create_async_engine(url, future=True)
 
@@ -33,13 +32,8 @@ def run_migrations_online():
                     connection=conn, target_metadata=target_metadata
                 )
             )
-            await connection.run_sync(lambda conn: context.configure(connection=conn, target_metadata=target_metadata))
             await connection.run_sync(lambda _: context.run_migrations())
 
-        async with async_session() as session:
-            await seed_data(session)
-
-    import asyncio
     asyncio.run(run())
 
 if context.is_offline_mode():
