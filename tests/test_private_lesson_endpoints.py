@@ -3,8 +3,9 @@ from app.database import Base
 from app.main import app
 from app.models.course import Course
 from app.models.private_lesson import PrivateLesson
-from app.models import course, private_lesson, reservation, review, user
 from app.models.user import User
+from app.schemas.course import CourseOut
+from app.schemas.user import UserOut
 from datetime import datetime
 from tests.db_for_tests import db_engine, get_db_for_tests, SessionLocal
 from fastapi.testclient import TestClient
@@ -46,43 +47,48 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         async with db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
 
-    async def test_getting_all_private_lessons(self):
-        private_lesson_1 = PrivateLesson(
-            tutor_id=self.example_tutor.id,
-            course_id=self.example_course.id,
-            start_time=datetime(2023, 10, 1, 10, 0),
-            end_time=datetime(2023, 10, 1, 11, 0),
-            price=1,
-        )
-        private_lesson_2 = PrivateLesson(
-            tutor_id=self.example_tutor.id,
-            course_id=self.example_course.id,
-            start_time=datetime(2023, 10, 2, 10, 0),
-            end_time=datetime(2023, 10, 2, 11, 0),
-            price=2,
-        )
-        async with SessionLocal() as session:
-            session.add_all((private_lesson_1, private_lesson_2))
-            await session.commit()
-            await session.refresh(private_lesson_1)
-            await session.refresh(private_lesson_2)
+    async def test_get_all_private_lessons(self):
+        private_lessons = await self.__add_example_private_lessons_to_the_db(2)
         response_body = self.app.get("/private-lessons/").json()
+
+        example_course_out = CourseOut.model_validate(self.example_course).model_dump()
+        example_tutor_out = UserOut.model_validate(self.example_tutor).model_dump()
         expected_response_body = [
             {
-                "id": private_lesson_1.id,
-                "tutor_id": private_lesson_1.tutor_id,
-                "course_id": private_lesson_1.course_id,
-                "start_time": private_lesson_1.start_time.isoformat(),
-                "end_time": private_lesson_1.end_time.isoformat(),
-                "price": private_lesson_1.price,
+                "course": example_course_out,
+                "course_id": private_lessons[0].course_id,
+                "end_time": private_lessons[0].end_time.isoformat(),
+                "id": private_lessons[0].id,
+                "price": private_lessons[0].price,
+                "start_time": private_lessons[0].start_time.isoformat(),
+                "tutor_id": private_lessons[0].tutor_id,
+                "tutor": example_tutor_out
             },
             {
-                "id": private_lesson_2.id,
-                "tutor_id": private_lesson_2.tutor_id,
-                "course_id": private_lesson_2.course_id,
-                "start_time": private_lesson_2.start_time.isoformat(),
-                "end_time": private_lesson_2.end_time.isoformat(),
-                "price": private_lesson_2.price,
+                "course": example_course_out,
+                "course_id": private_lessons[1].course_id,
+                "end_time": private_lessons[1].end_time.isoformat(),
+                "id": private_lessons[1].id,
+                "price": private_lessons[1].price,
+                "start_time": private_lessons[1].start_time.isoformat(),
+                "tutor_id": private_lessons[1].tutor_id,
+                "tutor": example_tutor_out
             }
         ]
+
         self.assertEqual(response_body, expected_response_body)
+    
+    async def __add_example_private_lessons_to_the_db(self, number_of_lessons_to_add: int = 1):
+        private_lessons = [PrivateLesson(
+                course_id=self.example_course.id,
+                end_time=datetime(2023, 10, 1, 11, 0),
+                price=1 + i,
+                start_time=datetime(2023, 10, 1, 10, 0),
+                tutor_id=self.example_tutor.id,
+            )  for i in range(number_of_lessons_to_add)]
+        async with SessionLocal() as session:
+            session.add_all(private_lessons)
+            await session.commit()
+            for lesson in private_lessons:
+                await session.refresh(lesson)
+        return private_lessons

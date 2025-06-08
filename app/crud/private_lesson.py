@@ -1,12 +1,18 @@
-from sqlalchemy import func, and_
+from sqlalchemy import and_, func, select 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from app.models.private_lesson import PrivateLesson
 from app.schemas.private_lesson import PrivateLessonCreate
 
 async def get_all_private_lessons(db: AsyncSession):
-    result = await db.execute(select(PrivateLesson))
-    return result.scalars().all()
+    eager_loading_options = PrivateLesson.get_eager_loading_options(
+        course=True,
+        reservations=False,
+        tutor=True
+    )
+    query = select(PrivateLesson).options(*eager_loading_options)
+    result = await db.execute(query)
+    private_lessons = result.scalars().all()
+    return private_lessons
 
 async def get_private_lesson_by_id(db: AsyncSession, lesson_id: int):
     result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
