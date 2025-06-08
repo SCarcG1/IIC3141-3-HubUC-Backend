@@ -1,3 +1,4 @@
+from sqlalchemy import func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.private_lesson import PrivateLesson
