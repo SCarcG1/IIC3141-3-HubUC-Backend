@@ -45,12 +45,16 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     return db_lesson
 
 async def delete_private_lesson(db: AsyncSession, lesson_id: int):
-    db_lesson = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
-    if db_lesson is None:
+    result = await db.execute(
+        select(PrivateLesson).where(PrivateLesson.id == lesson_id)
+    )
+    db_lesson = result.scalar_one_or_none()
+    if not db_lesson:
         return None
+
     await db.delete(db_lesson)
     await db.commit()
-    return db_lesson
+    return True
 
 async def update_private_lesson(db: AsyncSession, lesson_id: int, lesson: PrivateLessonCreate):
     result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
