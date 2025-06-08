@@ -9,7 +9,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal: sessionmaker[AsyncSession] = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 class Base(DeclarativeBase):
     '''
@@ -19,7 +19,7 @@ class Base(DeclarativeBase):
 
 async def init_db():
     # Add all models to the following import:
-    from app.models import course, private_lesson, reservation, review, user
+    from app.models import course, private_lesson, reservation, review, user, weekly_timeblock
 
     max_retries = 10
     retry_delay = 2  # segundos

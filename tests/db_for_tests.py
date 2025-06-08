@@ -1,5 +1,3 @@
-from app.models.course import Course
-from app.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
