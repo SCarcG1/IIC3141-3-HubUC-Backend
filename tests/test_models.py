@@ -53,7 +53,8 @@ class TestModels(TestCase):
             course_id=course.id,
             start_time=datetime.now(),
             end_time=datetime.now() + timedelta(hours=1),
-            price=lesson_price
+            price=lesson_price,
+            description="A private lesson for testing"
         )
         retrieved_lesson = None
         with Session(self.engine) as session:
@@ -90,7 +91,8 @@ class TestModels(TestCase):
             course_id=course.id,
             start_time=datetime.now(),
             end_time=datetime.now() + timedelta(hours=1),
-            price=100
+            price=100,
+            description="A private lesson for testing"
         )
         with Session(self.engine) as session:
             session.add(lesson)
@@ -136,7 +138,8 @@ class TestModels(TestCase):
             course_id=course.id,
             start_time=datetime.now(),
             end_time=datetime.now() + timedelta(hours=1),
-            price=10000
+            price=10000,
+            description="A private lesson for testing"
         )
         with Session(self.engine) as session:
             session.add(lesson)

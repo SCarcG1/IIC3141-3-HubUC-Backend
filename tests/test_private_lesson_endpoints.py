@@ -55,6 +55,7 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
             "price": 10000,
             "start_time": "2023-10-01T10:00:00",
             "tutor_id": self.example_tutor.id,
+            "description": "This is a test private lesson."
         }
         self.app.post(
             url="/private-lessons/",
@@ -74,6 +75,7 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         self.assertEqual(db_private_lesson.price, private_lesson_json["price"])
         self.assertEqual(db_private_lesson.start_time, datetime.fromisoformat(private_lesson_json["start_time"]))
         self.assertEqual(db_private_lesson.tutor_id, private_lesson_json["tutor_id"])
+        self.assertEqual(db_private_lesson.description, private_lesson_json["description"])
 
     async def test_get_all_private_lessons(self):
         db_private_lessons = await self.__add_example_private_lessons_to_the_db(2)
@@ -87,7 +89,8 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
             self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
             self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
             self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
-    
+            self.assertEqual(actual_private_lesson.description, expected_private_lesson.description)
+
     async def __add_example_private_lessons_to_the_db(self, number_of_lessons_to_add: int):
         private_lessons = [
             PrivateLesson(
@@ -96,6 +99,8 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
                 price=1 + i,
                 start_time=datetime(2023, 10, 1, 10, 0, 0),
                 tutor_id=self.example_tutor.id,
+                description=f"Clase Privada sobre {self.example_course.name} con {self.example_tutor.name}"
+                
             ) for i in range(number_of_lessons_to_add)
         ]
         async with SessionLocal() as session:
@@ -115,6 +120,7 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
         self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
         self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
+        self.assertEqual(actual_private_lesson.description, expected_private_lesson.description)
 
     async def test_search_private_lessons(self):
         expected_total = 20

@@ -41,7 +41,8 @@ class TestPrivateLessonCrud(IsolatedAsyncioTestCase):
             course_id=course.id,
             start_time="2023-10-01T10:00:00",
             end_time="2023-10-01T11:00:00",
-            price=10000
+            price=10000,
+            description="A private lesson for testing"
         )
         created_lesson = None
         async with AsyncSession(self.engine) as session:
