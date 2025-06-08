@@ -7,10 +7,12 @@ from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.crud.user import create_user, get_user_by_email
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
-from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, delete_private_lesson, update_private_lesson
+from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, delete_private_lesson, update_private_lesson, get_tutors_private_lessons
 from app.schemas.private_lesson import PrivateLessonOut, PrivateLessonCreate, PrivateLessonUpdate
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
+from app.schemas.reservation import ReservationCreate, ReservationOut, ReservationUpdate
+from app.crud.reservation import get_all_reservations, get_reservation_by_id, get_reservation_by_student_id, create_reservation, get_reservation_by_tutor_id, update_reservation, delete_reservation
 
 from app.api.chat import manager  # <-- nuestro chat manager
 
@@ -35,7 +37,7 @@ async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):
     db_user = await get_user_by_email(db, user.email)
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token({"sub": db_user.email, "role": db_user.role})
+    token = create_access_token({"sub": db_user.email, "role": db_user.role, "id": db_user.id})
     return {"access_token": token}
 
 @router.get("/protected-route")
@@ -139,3 +141,50 @@ async def delete_existing_course(course_id: int, db: AsyncSession = Depends(get_
     if not deleted:
         raise HTTPException(status_code=404, detail="Course not found")
     return {"detail": f"Course {course_id} deleted"}
+
+######## Reservation Routes ########
+@router.get("/reservations", response_model=List[ReservationOut])
+async def read_reservations(db: AsyncSession = Depends(get_db)):
+    return await get_all_reservations(db)
+
+@router.get("/reservations/student", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
+async def read_students_reservations(db: AsyncSession = Depends(get_db), student: AsyncSession = Depends(JWTBearer())):
+    if student["role"] != "student":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return await get_reservation_by_student_id(db, student["id"])
+
+@router.get("/reservations/tutor", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
+async def read_tutors_reservations(db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())):
+    if tutor["role"] != "tutor":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return await get_reservation_by_tutor_id(db, tutor["id"])
+
+@router.post("/reservations/lesson/{private_lesson_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depends(get_db), student: AsyncSession = Depends(JWTBearer())):
+    if student["role"] != "student":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    reservation = ReservationCreate(
+        student_id=student["id"],
+        private_lesson_id=private_lesson_id,
+        status="pending"
+    )
+    return await create_reservation(db, reservation)
+
+@router.put("/reservations/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())):
+    if tutor["role"] != "tutor":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return await update_reservation(db, reservation_id, reservation)
+
+@router.delete("/reservations/{reservation_id}", dependencies=[Depends(JWTBearer())]) # ¿Se puede borrar una reservación si ya fue confirmada? Por ahora solo tutor puede borrar las reservaciones
+async def delete_reservation(reservation_id: int, db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())): 
+    if tutor["role"] != "tutor":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    deleted = await delete_reservation(db, reservation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    return {"detail": f"Reservation {reservation_id} deleted"}
+
