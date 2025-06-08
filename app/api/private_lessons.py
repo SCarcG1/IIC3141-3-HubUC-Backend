@@ -45,7 +45,7 @@ async def search_private_lessons(
         tutor_id=tutor_id
     )
 
-@router.get("/private-lessons/{lesson_id}", response_model=PrivateLessonOut)
+@router.get("/private-lessons/{lesson_id}", response_model=PrivateLessonExtendedOut)
 async def read_private_lesson_by_id(lesson_id: int, db: AsyncSession = Depends(get_db)):
     lesson = await get_private_lesson_by_id(db, lesson_id)
     if not lesson:

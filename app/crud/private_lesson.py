@@ -15,7 +15,12 @@ async def get_all_private_lessons(db: AsyncSession):
     return private_lessons
 
 async def get_private_lesson_by_id(db: AsyncSession, lesson_id: int):
-    result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
+    query = (
+        select(PrivateLesson)
+        .where(PrivateLesson.id == lesson_id)
+        .options(*PrivateLesson.get_eager_loading_options(course=True, tutor=True, reservations=False))
+    )
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 async def get_tutors_private_lessons(db: AsyncSession, tutor_id: int):
@@ -72,7 +77,7 @@ async def get_filtered_private_lessons_paginated(
     if tutor_id is not None:
         filters.append(PrivateLesson.tutor_id == tutor_id)
 
-    query = select(PrivateLesson)
+    query = select(PrivateLesson).options(*PrivateLesson.get_eager_loading_options(course=True, tutor=True))
     count_query = select(func.count(PrivateLesson.id))
 
     if filters:
