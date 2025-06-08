@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from typing import Optional
 from enum import Enum as PythonEnum
 
+from app.schemas.private_lesson import PrivateLessonExtendedOut
+from app.schemas.user import UserOut
+
+
 class ReservationStatus(str, PythonEnum):
     PENDING = "pending"
     ACCEPTED = "accepted"
@@ -29,3 +33,7 @@ class ReservationUpdate(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ReservationExtendedOut(ReservationOut):
+    student: UserOut
+    private_lesson: PrivateLessonExtendedOut

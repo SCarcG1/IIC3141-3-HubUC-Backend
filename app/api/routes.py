@@ -8,7 +8,7 @@ from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
-from app.schemas.reservation import ReservationCreate, ReservationOut, ReservationUpdate
+from app.schemas.reservation import ReservationCreate, ReservationOut, ReservationUpdate, ReservationExtendedOut
 from app.crud.reservation import get_all_reservations, get_reservation_by_id, get_reservation_by_student_id, create_reservation, get_reservation_by_tutor_id, update_reservation, delete_reservation
 
 from app.api.chat import manager  # <-- nuestro chat manager
@@ -111,21 +111,35 @@ async def delete_existing_course(course_id: int, db: AsyncSession = Depends(get_
     return {"detail": f"Course {course_id} deleted"}
 
 ######## Reservation Routes ########
-@router.get("/reservations", response_model=List[ReservationOut])
+@router.get("/reservations", response_model=List[ReservationExtendedOut])
 async def read_reservations(db: AsyncSession = Depends(get_db)):
     return await get_all_reservations(db)
 
-@router.get("/reservations/student", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
-async def read_students_reservations(db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
-    if student["role"] != "student":
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return await get_reservation_by_student_id(db, student["id"])
+@router.get(
+    "/reservations/student",
+    response_model=List[ReservationExtendedOut],
+    dependencies=[Depends(JWTBearer())]
+)
+async def read_students_reservations(
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(JWTBearer())
+):
+    if payload["role"] != "student":
+        raise HTTPException(403, "Forbidden")
+    return await get_reservation_by_student_id(db, payload["id"])
 
-@router.get("/reservations/tutor", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
-async def read_tutors_reservations(db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
-    if tutor["role"] != "tutor":
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return await get_reservation_by_tutor_id(db, tutor["id"])
+@router.get(
+    "/reservations/tutor",
+    response_model=List[ReservationExtendedOut],
+    dependencies=[Depends(JWTBearer())]
+)
+async def read_tutors_reservations(
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(JWTBearer())
+):
+    if payload["role"] != "tutor":
+        raise HTTPException(403, "Forbidden")
+    return await get_reservation_by_tutor_id(db, payload["id"])
 
 @router.post("/reservations/lesson/{private_lesson_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
 async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):

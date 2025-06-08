@@ -1,12 +1,21 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload, joinedload
 from app.models.reservation import Reservation
 from app.models.private_lesson import PrivateLesson
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
 from app.crud.private_lesson import get_tutors_private_lessons
 
 async def get_all_reservations(db: AsyncSession):
-    result = await db.execute(select(Reservation))
+    query = (
+        select(Reservation)
+        .options(
+            selectinload(Reservation.student),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
+        )
+    )
+    result = await db.execute(query)
     return result.scalars().all()
 
 async def get_reservation_by_id(db: AsyncSession, reservation_id: int):
@@ -14,15 +23,35 @@ async def get_reservation_by_id(db: AsyncSession, reservation_id: int):
     return result.scalar_one_or_none()
 
 async def get_reservation_by_student_id(db: AsyncSession, student_id: int):
-    result = await db.execute(select(Reservation).where(Reservation.student_id == student_id))
+    query = (
+        select(Reservation)
+        .where(Reservation.student_id == student_id)
+        .options(
+            selectinload(Reservation.student),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
+        )
+    )
+    result = await db.execute(query)
     return result.scalars().all()
 
 async def get_reservation_by_tutor_id(db: AsyncSession, tutor_id: int):
-    result = await db.execute(select(PrivateLesson).where(PrivateLesson.tutor_id == tutor_id))
-    tutor_lessons= result.scalars().all()
-    tutor_lesson_ids = [lesson.id for lesson in tutor_lessons]
+    lesson_ids = (
+        await db.execute(
+            select(PrivateLesson.id).where(PrivateLesson.tutor_id == tutor_id)
+        )
+    ).scalars().all()
 
-    result = await db.execute(select(Reservation).where(Reservation.private_lesson_id.in_(tutor_lesson_ids)))
+    query = (
+        select(Reservation)
+        .where(Reservation.private_lesson_id.in_(lesson_ids))
+        .options(
+            selectinload(Reservation.student),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
+        )
+    )
+    result = await db.execute(query)
     return result.scalars().all()
 
 async def create_reservation(db: AsyncSession, reservation: ReservationCreate):
