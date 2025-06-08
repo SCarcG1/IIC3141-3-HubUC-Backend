@@ -11,6 +11,7 @@ class PrivateLessonBase(BaseModel):
     start_time: datetime
     end_time: datetime
     price: int
+    description: str
 
 
 class PrivateLessonOut(PrivateLessonBase):
@@ -36,6 +37,7 @@ class PrivateLessonUpdate(BaseModel):
     start_time: Optional[datetime]
     end_time: Optional[datetime]
     price: Optional[int]
+    description: Optional[str]
 
     class Config:
         orm_mode = True

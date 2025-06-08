@@ -55,7 +55,8 @@ async def seed_data(session: AsyncSession):
                 course_id=course.id,
                 start_time=now + timedelta(days=i),
                 end_time=now + timedelta(days=i, hours=1),
-                price=10000 + i * 1000
+                price=10000 + i * 1000,
+                description=f"Clase Privada sobre {course.name} con {tutor.name}"
             )
             session.add(lesson)
 
