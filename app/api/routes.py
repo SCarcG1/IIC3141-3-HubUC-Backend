@@ -148,19 +148,19 @@ async def read_reservations(db: AsyncSession = Depends(get_db)):
     return await get_all_reservations(db)
 
 @router.get("/reservations/student", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
-async def read_students_reservations(db: AsyncSession = Depends(get_db), student: AsyncSession = Depends(JWTBearer())):
+async def read_students_reservations(db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
     if student["role"] != "student":
         raise HTTPException(status_code=403, detail="Forbidden")
     return await get_reservation_by_student_id(db, student["id"])
 
 @router.get("/reservations/tutor", response_model=List[ReservationOut], dependencies=[Depends(JWTBearer())])
-async def read_tutors_reservations(db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())):
+async def read_tutors_reservations(db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
     if tutor["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
     return await get_reservation_by_tutor_id(db, tutor["id"])
 
 @router.post("/reservations/lesson/{private_lesson_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depends(get_db), student: AsyncSession = Depends(JWTBearer())):
+async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
     if student["role"] != "student":
         raise HTTPException(status_code=403, detail="Forbidden")
     
@@ -172,17 +172,17 @@ async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depe
     return await create_reservation(db, reservation)
 
 @router.put("/reservations/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())):
+async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
     if tutor["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return await update_reservation(db, reservation_id, reservation)
 
-@router.delete("/reservations/{reservation_id}", dependencies=[Depends(JWTBearer())]) # ¿Se puede borrar una reservación si ya fue confirmada? Por ahora solo tutor puede borrar las reservaciones
-async def delete_reservation(reservation_id: int, db: AsyncSession = Depends(get_db), tutor: AsyncSession = Depends(JWTBearer())): 
-    if tutor["role"] != "tutor":
+@router.delete("/reservations/{reservation_id}", dependencies=[Depends(JWTBearer())])
+async def delete_reservation_endpoint(reservation_id: int, db: AsyncSession = Depends(get_db), token: dict = Depends(JWTBearer())): 
+    if token["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
-
+    
     deleted = await delete_reservation(db, reservation_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Reservation not found")
