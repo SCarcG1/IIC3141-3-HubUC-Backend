@@ -64,3 +64,60 @@ class TestReservationEndpoints(IsolatedAsyncioTestCase):
         assert body["student_id"] == self.student.id
         assert body["private_lesson_id"] == self.lesson.id
         assert body["status"] == "pending"
+
+    async def test_get_all_reservations_endpoint(self):
+        # Generar dos reservas por CRUD
+        from app.crud.reservation import create_reservation
+        from app.schemas.reservation import ReservationCreate
+        async with SessionLocal() as s:
+            await create_reservation(s, ReservationCreate(student_id=self.student.id, private_lesson_id=self.lesson.id,
+                                                          status="pending"))
+            await create_reservation(s, ReservationCreate(student_id=self.student.id, private_lesson_id=self.lesson.id,
+                                                          status="pending"))
+        resp = self.app.get("/reservations")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 2)
+
+    async def test_get_student_reservations_endpoint(self):
+        # Usar endpoint POST + GET /reservations/student
+        token_s = generate_token(self.student.id, "student")
+        self.app.post(f"/reservations/lesson/{self.lesson.id}", headers={"Authorization": f"Bearer {token_s}"})
+        resp = self.app.get("/reservations/student", headers={"Authorization": f"Bearer {token_s}"})
+        self.assertEqual(resp.status_code, 200)
+        arr = resp.json()
+        self.assertTrue(all(r["student_id"] == self.student.id for r in arr))
+
+    async def test_get_tutor_reservations_endpoint(self):
+        # Crear reserva y luego GET /reservations/tutor
+        token_s = generate_token(self.student.id, "student")
+        self.app.post(f"/reservations/lesson/{self.lesson.id}", headers={"Authorization": f"Bearer {token_s}"})
+        token_t = generate_token(self.tutor.id, "tutor")
+        resp = self.app.get("/reservations/tutor", headers={"Authorization": f"Bearer {token_t}"})
+        self.assertEqual(resp.status_code, 200)
+        arr = resp.json()
+        # cada reserva incluye private_lesson.tutor_id == tutor.id
+        self.assertTrue(all(r["private_lesson"]["tutor"]["id"] == self.tutor.id for r in arr))
+
+    async def test_update_reservation_endpoint(self):
+        # Crear y actualizar vía PUT
+        token_s = generate_token(self.student.id, "student")
+        created = self.app.post(f"/reservations/lesson/{self.lesson.id}",
+                                headers={"Authorization": f"Bearer {token_s}"}).json()
+        token_t = generate_token(self.tutor.id, "tutor")
+        resp = self.app.put(f"/reservations/{created['id']}", json={"status": "accepted"},
+                            headers={"Authorization": f"Bearer {token_t}"})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["status"], "accepted")
+
+    async def test_delete_reservation_endpoint(self):
+        # Crear + DELETE
+        token_s = generate_token(self.student.id, "student")
+        created = self.app.post(f"/reservations/lesson/{self.lesson.id}",
+                                headers={"Authorization": f"Bearer {token_s}"}).json()
+        token_t = generate_token(self.tutor.id, "tutor")
+        resp = self.app.delete(f"/reservations/{created['id']}", headers={"Authorization": f"Bearer {token_t}"})
+        self.assertEqual(resp.status_code, 200)
+        # Ahora GET /reservations no lo incluye
+        allr = self.app.get("/reservations").json()
+        self.assertFalse(any(r["id"] == created["id"] for r in allr))

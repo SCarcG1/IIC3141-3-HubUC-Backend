@@ -139,3 +139,46 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         self.assertEqual(response_body.page_size, expected_page_size)
         self.assertEqual(len(response_body.results), expected_page_size)
         self.assertEqual(response_body.total, expected_total)
+
+    async def test_update_private_lesson_endpoint(self):
+        payload = {
+            "course_id": self.example_course.id,
+            "tutor_id": self.example_tutor.id,
+            "start_time": "2023-10-02T09:00:00",
+            "end_time": "2023-10-02T10:00:00",
+            "price": 9000,
+            "description": "Inicial"
+        }
+        headers = get_auth_header_for_tests(
+            email=self.example_tutor.email,
+            role=self.example_tutor.role,
+            user_id=self.example_tutor.id
+        )
+        post = self.app.post("/private-lessons", json=payload, headers=headers)
+        created = post.json()
+        upd_payload = {"price": 9500, "description": "Modificada"}
+        patch = self.app.patch(f"/private-lessons/{created['id']}", json=upd_payload, headers=headers)
+        self.assertEqual(patch.status_code, 200)
+        updated = patch.json()
+        self.assertEqual(updated["price"], 9500)
+        self.assertEqual(updated["description"], "Modificada")
+
+    async def test_delete_private_lesson_endpoint(self):
+        payload = {
+            "course_id": self.example_course.id,
+            "tutor_id": self.example_tutor.id,
+            "start_time": "2023-10-03T14:00:00",
+            "end_time": "2023-10-03T15:00:00",
+            "price": 11000,
+            "description": "A borrar"
+        }
+        headers = get_auth_header_for_tests(
+            email=self.example_tutor.email,
+            role=self.example_tutor.role,
+            user_id=self.example_tutor.id
+        )
+        created = self.app.post("/private-lessons", json=payload, headers=headers).json()
+        delete = self.app.delete(f"/private-lessons/{created['id']}", headers=headers)
+        self.assertEqual(delete.status_code, 200)
+        get = self.app.get(f"/private-lessons/{created['id']}")
+        self.assertEqual(get.status_code, 404)
