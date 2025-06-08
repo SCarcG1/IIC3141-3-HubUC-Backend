@@ -15,6 +15,10 @@ async def get_tutors_private_lessons(db: AsyncSession, tutor_id: int):
     result = await db.execute(select(PrivateLesson).where(PrivateLesson.tutor_id == tutor_id))
     return result.scalars().all()
 
+async def get_all_courses_private_lessons(db: AsyncSession, course_id: int):
+    result = await db.execute(select(PrivateLesson).where(PrivateLesson.course_id == course_id))
+    return result.scalars().all()
+
 async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     start = lesson.start_time.replace(tzinfo=None)
     end = lesson.end_time.replace(tzinfo=None)
