@@ -21,3 +21,4 @@ class User(Base):
 
     private_lessons = relationship("PrivateLesson", back_populates="tutor")
     reservations = relationship("Reservation", back_populates="student")
+    weekly_timeblocks = relationship("WeeklyTimeblock", back_populates="user")
