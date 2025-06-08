@@ -5,7 +5,7 @@ from app.models.course import Course
 from app.models.private_lesson import PrivateLesson
 from app.models.user import User
 from app.schemas.course import CourseOut
-from app.schemas.private_lesson import PrivateLessonExtendedOut
+from app.schemas.private_lesson import PrivateLessonExtendedOut, PrivateLessonOut
 from app.schemas.user import UserOut
 from datetime import datetime
 from fastapi.testclient import TestClient
@@ -62,6 +62,17 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
             self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
             self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
             self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
+    
+    async def test_get_private_lesson_by_id(self):
+        expected_private_lesson = (await self.__add_example_private_lessons_to_the_db(1))[0]
+        response_body = self.app.get(f"/private-lessons/{expected_private_lesson.id}").json()
+        actual_private_lesson = PrivateLessonOut.model_validate(response_body)
+        self.assertEqual(actual_private_lesson.id, expected_private_lesson.id)
+        self.assertEqual(actual_private_lesson.course_id, expected_private_lesson.course_id)
+        self.assertEqual(actual_private_lesson.end_time, expected_private_lesson.end_time)
+        self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
+        self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
+        self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
 
     async def __add_example_private_lessons_to_the_db(self, number_of_lessons_to_add: int):
         private_lessons = [
