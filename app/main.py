@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.private_lessons import router as private_lessons_router
 from app.api.routes import router
 from app.database import init_db, SessionLocal
 from app.seeds.seed import seed_data
@@ -30,4 +31,5 @@ async def on_startup():
 def read_root():
     return {"message": "FastAPI + PostgreSQL on Render"}
 
+app.include_router(private_lessons_router)
 app.include_router(router)

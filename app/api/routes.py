@@ -1,20 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Any, Optional
-
+from typing import List
 from app.database import SessionLocal
 from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.crud.user import create_user, get_user_by_email
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
-from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, \
-    delete_private_lesson, update_private_lesson, get_tutors_private_lessons, get_filtered_private_lessons_paginated
-from app.schemas.private_lesson import (
-    PrivateLessonCreate,
-    PrivateLessonExtendedOut,
-    PrivateLessonOut,
-    PrivateLessonUpdate
-)
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
 from app.schemas.reservation import ReservationCreate, ReservationOut, ReservationUpdate
@@ -71,52 +62,6 @@ async def websocket_chat(websocket: WebSocket, username: str):
             "system": True,
             "message": f"❌ {left} ha salido del chat"
         })
-
-######## Private Lessons Routes ########
-@router.get("/private-lessons", response_model=List[PrivateLessonExtendedOut])
-async def read_all_private_lessons(db: AsyncSession = Depends(get_db)):
-    return await get_all_private_lessons(db)
-
-@router.get("/private-lessons/{lesson_id}", response_model=PrivateLessonOut)
-async def read_private_lesson_by_id(lesson_id: int, db: AsyncSession = Depends(get_db)):
-    lesson = await get_private_lesson_by_id(db, lesson_id)
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Private lesson not found")
-    return lesson
-
-@router.post("/private-lessons", response_model=PrivateLessonOut, dependencies=[Depends(JWTBearer())])
-async def create_lesson(lesson: PrivateLessonCreate, db: AsyncSession = Depends(get_db)):
-    return await create_private_lesson(db, lesson)
-
-@router.delete("/private-lessons/{lesson_id}", dependencies=[Depends(JWTBearer())])
-async def delete_lesson(lesson_id: int, db: AsyncSession = Depends(get_db)):
-    deleted = await delete_private_lesson(db, lesson_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Private lesson not found")
-    return {"detail": f"Private lesson {lesson_id} deleted"}
-
-@router.patch("/private-lessons/{lesson_id}", response_model=PrivateLessonOut, dependencies=[Depends(JWTBearer())])
-async def update_lesson(lesson_id: int, lesson: PrivateLessonUpdate, db: AsyncSession = Depends(get_db)):
-    updated = await update_private_lesson(db, lesson_id, lesson)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Private lesson not found")
-    return updated
-
-@router.get("/private-lessons/search", response_model=dict)
-async def search_private_lessons(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    course_id: Optional[int] = None,
-    tutor_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db)
-) -> dict[str, Any]:
-    return await get_filtered_private_lessons_paginated(
-        db=db,
-        page=page,
-        page_size=page_size,
-        course_id=course_id,
-        tutor_id=tutor_id
-    )
 
 ######## Course Routes ########
 @router.get("/courses", response_model=List[CourseOut])

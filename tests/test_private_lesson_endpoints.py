@@ -4,9 +4,7 @@ from app.main import app
 from app.models.course import Course
 from app.models.private_lesson import PrivateLesson
 from app.models.user import User
-from app.schemas.course import CourseOut
-from app.schemas.private_lesson import PrivateLessonExtendedOut, PrivateLessonOut
-from app.schemas.user import UserOut
+from app.schemas.private_lesson import PrivateLessonExtendedOut, PrivateLessonOut, PrivateLessonPage
 from datetime import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -50,47 +48,6 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         async with db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
 
-    async def test_get_all_private_lessons(self):
-        db_private_lessons = await self.__add_example_private_lessons_to_the_db(2)
-        response_body = self.app.get("/private-lessons/").json()
-        for i in range(len(db_private_lessons)):
-            expected_private_lesson = db_private_lessons[i]
-            actual_private_lesson = PrivateLessonExtendedOut.model_validate(response_body[i])
-            self.assertEqual(actual_private_lesson.id, expected_private_lesson.id)
-            self.assertEqual(actual_private_lesson.course_id, expected_private_lesson.course_id)
-            self.assertEqual(actual_private_lesson.end_time, expected_private_lesson.end_time)
-            self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
-            self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
-            self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
-    
-    async def test_get_private_lesson_by_id(self):
-        expected_private_lesson = (await self.__add_example_private_lessons_to_the_db(1))[0]
-        response_body = self.app.get(f"/private-lessons/{expected_private_lesson.id}").json()
-        actual_private_lesson = PrivateLessonOut.model_validate(response_body)
-        self.assertEqual(actual_private_lesson.id, expected_private_lesson.id)
-        self.assertEqual(actual_private_lesson.course_id, expected_private_lesson.course_id)
-        self.assertEqual(actual_private_lesson.end_time, expected_private_lesson.end_time)
-        self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
-        self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
-        self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
-
-    async def __add_example_private_lessons_to_the_db(self, number_of_lessons_to_add: int):
-        private_lessons = [
-            PrivateLesson(
-                course_id=self.example_course.id,
-                end_time=datetime(2023, 10, 1, 11, 0, 0),
-                price=10000,
-                start_time=datetime(2023, 10, 1, 10, 0, 0),
-                tutor_id=self.example_tutor.id,
-            ) for _ in range(number_of_lessons_to_add)
-        ]
-        async with SessionLocal() as session:
-            session.add_all(private_lessons)
-            await session.commit()
-            for lesson in private_lessons:
-                await session.refresh(lesson)
-        return private_lessons
-
     async def test_that_post_private_lesson_creates_the_lesson_in_the_db(self):
         private_lesson_json = {
             "course_id": self.example_course.id,
@@ -117,3 +74,62 @@ class TestPrivateLessonEndpoints(IsolatedAsyncioTestCase):
         self.assertEqual(db_private_lesson.price, private_lesson_json["price"])
         self.assertEqual(db_private_lesson.start_time, datetime.fromisoformat(private_lesson_json["start_time"]))
         self.assertEqual(db_private_lesson.tutor_id, private_lesson_json["tutor_id"])
+
+    async def test_get_all_private_lessons(self):
+        db_private_lessons = await self.__add_example_private_lessons_to_the_db(2)
+        response_body = self.app.get("/private-lessons/").json()
+        for i in range(len(db_private_lessons)):
+            expected_private_lesson = db_private_lessons[i]
+            actual_private_lesson = PrivateLessonExtendedOut.model_validate(response_body[i])
+            self.assertEqual(actual_private_lesson.id, expected_private_lesson.id)
+            self.assertEqual(actual_private_lesson.course_id, expected_private_lesson.course_id)
+            self.assertEqual(actual_private_lesson.end_time, expected_private_lesson.end_time)
+            self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
+            self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
+            self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
+    
+    async def __add_example_private_lessons_to_the_db(self, number_of_lessons_to_add: int):
+        private_lessons = [
+            PrivateLesson(
+                course_id=self.example_course.id,
+                end_time=datetime(2023, 10, 1, 11, 0, 0),
+                price=1 + i,
+                start_time=datetime(2023, 10, 1, 10, 0, 0),
+                tutor_id=self.example_tutor.id,
+            ) for i in range(number_of_lessons_to_add)
+        ]
+        async with SessionLocal() as session:
+            session.add_all(private_lessons)
+            await session.commit()
+            for lesson in private_lessons:
+                await session.refresh(lesson)
+        return private_lessons
+
+    async def test_get_private_lesson_by_id(self):
+        expected_private_lesson = (await self.__add_example_private_lessons_to_the_db(1))[0]
+        response_body = self.app.get(f"/private-lessons/{expected_private_lesson.id}").json()
+        actual_private_lesson = PrivateLessonOut.model_validate(response_body)
+        self.assertEqual(actual_private_lesson.id, expected_private_lesson.id)
+        self.assertEqual(actual_private_lesson.course_id, expected_private_lesson.course_id)
+        self.assertEqual(actual_private_lesson.end_time, expected_private_lesson.end_time)
+        self.assertEqual(actual_private_lesson.price, expected_private_lesson.price)
+        self.assertEqual(actual_private_lesson.start_time, expected_private_lesson.start_time)
+        self.assertEqual(actual_private_lesson.tutor_id, expected_private_lesson.tutor_id)
+
+    async def test_search_private_lessons(self):
+        expected_total = 20
+        await self.__add_example_private_lessons_to_the_db(expected_total)
+        expected_page = 1
+        expected_page_size = 10
+        response_body = self.app.get(
+            f"/private-lessons/search"
+            + f"?page={expected_page}"
+            + f"&page_size={expected_page_size}"
+            + f"&course_id={self.example_course.id}"
+            + f"&tutor_id={self.example_tutor.id}"
+        ).json()
+        response_body = PrivateLessonPage.model_validate(response_body)
+        self.assertEqual(response_body.page, expected_page)
+        self.assertEqual(response_body.page_size, expected_page_size)
+        self.assertEqual(len(response_body.results), expected_page_size)
+        self.assertEqual(response_body.total, expected_total)
