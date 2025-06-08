@@ -3,9 +3,10 @@ from app.database import Base
 from app.main import app
 from app.models.course import Course
 from app.models.private_lesson import PrivateLesson
+from app.models import course, private_lesson, reservation, review, user
 from app.models.user import User
 from datetime import datetime
-from db_for_tests import db_engine, get_db_for_tests, SessionLocal
+from tests.db_for_tests import db_engine, get_db_for_tests, SessionLocal
 from fastapi.testclient import TestClient
 from unittest import IsolatedAsyncioTestCase
 

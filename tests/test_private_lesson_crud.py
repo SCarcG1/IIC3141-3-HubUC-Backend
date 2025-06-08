@@ -5,6 +5,7 @@ from app.models.user import User
 from app.schemas.private_lesson import PrivateLessonCreate
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from unittest import IsolatedAsyncioTestCase
+from app.models import course, private_lesson, reservation, review, user
 
 
 
