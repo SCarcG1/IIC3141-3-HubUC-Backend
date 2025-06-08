@@ -19,7 +19,7 @@ class Base(DeclarativeBase):
 
 async def init_db():
     # Add all models to the following import:
-    from app.models import course, private_lesson, reservation, review, user
+    from app.models import course, private_lesson, reservation, review, user, weekly_timeblock
 
     max_retries = 10
     retry_delay = 2  # segundos
