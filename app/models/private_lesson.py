@@ -16,9 +16,9 @@ class PrivateLesson(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("course.id"))
     course = relationship("Course", back_populates="private_lessons")
 
-    start_time: Mapped[datetime] = mapped_column(DateTime)
+    start_time: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
-    end_time: Mapped[datetime] = mapped_column(DateTime)
+    end_time: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
     price: Mapped[int] = mapped_column()
 
