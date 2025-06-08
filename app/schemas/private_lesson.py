@@ -39,3 +39,9 @@ class PrivateLessonUpdate(BaseModel):
 
     class Config:
         orm_mode = True
+
+class PrivateLessonPage(BaseModel):
+    page: int
+    page_size: int
+    results: list[PrivateLessonOut]
+    total: int
