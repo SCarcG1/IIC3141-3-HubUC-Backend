@@ -14,13 +14,16 @@ class PrivateLessonBase(BaseModel):
 
 
 class PrivateLessonOut(PrivateLessonBase):
-    course: CourseOut
     id: int
-    tutor: UserOut
 
     class Config:
         from_attributes = True
         orm_mode = True
+
+
+class PrivateLessonExtendedOut(PrivateLessonOut):
+    course: CourseOut
+    tutor: UserOut
 
 
 class PrivateLessonCreate(PrivateLessonBase):
