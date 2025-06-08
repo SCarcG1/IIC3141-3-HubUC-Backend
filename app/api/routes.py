@@ -7,7 +7,8 @@ from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.crud.user import create_user, get_user_by_email
 from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
-from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, delete_private_lesson, update_private_lesson, get_tutors_private_lessons
+from app.crud.private_lesson import get_all_private_lessons, get_private_lesson_by_id, create_private_lesson, \
+    delete_private_lesson, update_private_lesson, get_tutors_private_lessons, get_filtered_private_lessons_paginated
 from app.schemas.private_lesson import PrivateLessonOut, PrivateLessonCreate, PrivateLessonUpdate
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
