@@ -28,21 +28,18 @@ async def get_tutors_private_lessons(db: AsyncSession, tutor_id: int):
     return result.scalars().all()
 
 async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
-    start = lesson.start_time.replace(tzinfo=None)
-    end = lesson.end_time.replace(tzinfo=None)
-
     db_lesson = PrivateLesson(
         tutor_id=lesson.tutor_id,
         course_id=lesson.course_id,
-        start_time=start,
-        end_time=end,
-        price=lesson.price,
-        description=lesson.description
+        start_time=lesson.start_time.replace(tzinfo=None) if lesson.start_time else None,
+        end_time=lesson.end_time.replace(tzinfo=None) if lesson.end_time else None,
+        price=lesson.price
     )
     db.add(db_lesson)
     await db.commit()
     await db.refresh(db_lesson)
     return db_lesson
+
 
 async def delete_private_lesson(db: AsyncSession, lesson_id: int):
     result = await db.execute(

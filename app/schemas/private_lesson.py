@@ -8,8 +8,8 @@ from typing import Optional
 class PrivateLessonBase(BaseModel):
     tutor_id: int
     course_id: int
-    start_time: datetime
-    end_time: datetime
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     price: int
     description: Optional[str] = None
 
