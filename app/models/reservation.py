@@ -22,5 +22,3 @@ class Reservation(Base):
     private_lesson = relationship("PrivateLesson", back_populates="reservations")
 
     status: Mapped[ReservationStatus] = mapped_column(Enum(ReservationStatus))
-
-    review = relationship("Review", back_populates="reservation")
