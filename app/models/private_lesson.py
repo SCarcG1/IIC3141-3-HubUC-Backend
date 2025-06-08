@@ -2,6 +2,7 @@ from app.database import Base
 from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.orm import joinedload, Mapped, mapped_column, relationship, selectinload
+from typing import Optional
 
 
 class PrivateLesson(Base):
@@ -21,7 +22,7 @@ class PrivateLesson(Base):
 
     price: Mapped[int] = mapped_column()
 
-    description: Mapped[str] = mapped_column(Text)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     reservations = relationship("Reservation", back_populates="private_lesson")
 
