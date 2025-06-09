@@ -156,7 +156,7 @@ async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depe
         raise HTTPException(status_code=403, detail="Forbidden")
 
     reservation = ReservationCreate(
-        student_id=student["id"],
+        student_id = student.get("id") or student.get("user_id"),
         private_lesson_id=private_lesson_id,
         status="pending"
     )
