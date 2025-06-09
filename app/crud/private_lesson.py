@@ -33,7 +33,8 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
         course_id=lesson.course_id,
         start_time=lesson.start_time.replace(tzinfo=None) if lesson.start_time else None,
         end_time=lesson.end_time.replace(tzinfo=None) if lesson.end_time else None,
-        price=lesson.price
+        price=lesson.price,
+        description=lesson.description
     )
     db.add(db_lesson)
     await db.commit()
