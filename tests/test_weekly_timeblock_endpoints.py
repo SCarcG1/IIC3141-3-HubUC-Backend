@@ -3,6 +3,7 @@ from app.database import Base
 from app.main import app
 from app.models.user import User
 from app.models.weekly_timeblock import WeeklyTimeblock
+from app.schemas.weekly_timeblock import WeeklyTimeblockOut
 from datetime import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -75,5 +76,33 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
     # async def test_post_weekly_timeblock_with_invalid_jwt(self):
     #     self.assertTrue(False)
     
-    # async def test_get_weekly_timeblocks_of_user(self):
-    #     self.assertTrue(False)
+    async def test_get_weekly_timeblocks_of_user(self):
+        async with SessionLocal() as session:
+            db_timeblock_0 = WeeklyTimeblock(
+                weekday="Monday",
+                start_hour=9,
+                end_hour=17,
+                valid_from=datetime(2023, 10, 1, 0, 0, 0),
+                valid_until=datetime(2023, 12, 31, 23, 59, 59),
+                user_id=self.tutor.id
+            )
+            db_timeblock_1 = WeeklyTimeblock(
+                weekday="Tuesday",
+                start_hour=10,
+                end_hour=18,
+                valid_from=datetime(2023, 10, 1, 0, 0, 0),
+                valid_until=datetime(2023, 12, 31, 23, 59, 59),
+                user_id=self.tutor.id
+            )
+            session.add_all([db_timeblock_0, db_timeblock_1])
+            await session.commit()
+            await session.refresh(db_timeblock_0)
+            await session.refresh(db_timeblock_1)
+        expected_timeblock_0 = WeeklyTimeblockOut.model_validate(db_timeblock_0)
+        expected_timeblock_1 = WeeklyTimeblockOut.model_validate(db_timeblock_1)
+
+        returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
+
+        returned_timeblocks = [WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks]
+        self.assertEqual(returned_timeblocks[0], expected_timeblock_0)
+        self.assertEqual(returned_timeblocks[1], expected_timeblock_1)

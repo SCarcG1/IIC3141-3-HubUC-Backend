@@ -17,3 +17,6 @@ class WeeklyTimeblockCreate(WeeklyTimeblockBase):
 
 class WeeklyTimeblockOut(WeeklyTimeblockBase):
     id: int
+
+    class Config:
+        from_attributes = True
