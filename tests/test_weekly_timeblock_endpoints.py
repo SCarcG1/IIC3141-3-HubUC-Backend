@@ -69,35 +69,56 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
     # async def test_post_weekly_timeblock_with_invalid_jwt(self):
     #     self.assertTrue(False)
     
-    async def test_get_weekly_timeblocks_of_user(self):
-        async with SessionLocal() as session:
-            db_timeblock_0 = WeeklyTimeblock(
+    async def test_get_all_weekly_timeblocks_of_user(self):
+        db_timeblocks = await self.__add_timeblocks_to_the_database()
+        expected_timeblock_data = [
+            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in db_timeblocks
+        ]
+
+        returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
+
+        returned_timeblock_data = [
+            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+        ]
+        self.assertEqual(returned_timeblock_data, expected_timeblock_data)
+
+    async def __add_timeblocks_to_the_database(self):
+        timeblocks = [
+            WeeklyTimeblock(
                 weekday=Weekday.MONDAY,
                 start_hour=time(9, 0),
                 end_hour=time(17, 0),
-                valid_from=datetime(2023, 10, 1),
-                valid_until=datetime(2023, 12, 31),
+                valid_from=datetime(2025, 6, 1),
+                valid_until=datetime(2025, 6, 30),
                 user_id=self.tutor.id
-            )
-            db_timeblock_1 = WeeklyTimeblock(
+            ),
+            WeeklyTimeblock(
                 weekday=Weekday.TUESDAY,
                 start_hour=time(10, 0),
                 end_hour=time(18, 0),
-                valid_from=datetime(2023, 10, 1),
-                valid_until=datetime(2023, 12, 31),
+                valid_from=datetime(2025, 6, 2),
+                valid_until=datetime(2025, 6, 29),
                 user_id=self.tutor.id
             )
-            session.add_all([db_timeblock_0, db_timeblock_1])
+        ]
+        async with SessionLocal() as session:
+            session.add_all(timeblocks)
             await session.commit()
-            await session.refresh(db_timeblock_0)
-            await session.refresh(db_timeblock_1)
-        expected_timeblock_0_data = WeeklyTimeblockOut.model_validate(db_timeblock_0)
-        expected_timeblock_1_data = WeeklyTimeblockOut.model_validate(db_timeblock_1)
+            for timeblock in timeblocks:
+                await session.refresh(timeblock)
+        return timeblocks
 
-        returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
+    async def test_get_weekly_timeblocks_of_user_with_on_date_filter(self):
+        db_timeblocks = await self.__add_timeblocks_to_the_database()
+        # Only the first timeblock will match the on_date filter:
+        expected_timeblock_data = [WeeklyTimeblockOut.model_validate(db_timeblocks[0])]
+
+        returned_timeblocks = self.app.get(
+            f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",  # A valid Monday
+        ).json()
 
         returned_timeblocks_data = [
             WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
         ]
-        self.assertEqual(returned_timeblocks_data[0], expected_timeblock_0_data)
-        self.assertEqual(returned_timeblocks_data[1], expected_timeblock_1_data)
+        self.assertEqual(returned_timeblocks_data, expected_timeblock_data)
+
