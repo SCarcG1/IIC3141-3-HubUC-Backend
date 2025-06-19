@@ -1,24 +1,7 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
-from app.schemas.weekday import Weekday
+from app.utilities.single_timeblocks import are_timeblocks_connected, SingleTimeblock
+from app.utilities.weekdays import map_int_weekday_to_enum_weekday
 from datetime import datetime
-
-
-def map_int_weekday_to_enum_weekday(weekday_number: int):
-    if weekday_number == 0:
-        return Weekday.MONDAY
-    elif weekday_number == 1:
-        return Weekday.TUESDAY
-    elif weekday_number == 2:
-        return Weekday.WEDNESDAY
-    elif weekday_number == 3:
-        return Weekday.THURSDAY
-    elif weekday_number == 4:
-        return Weekday.FRIDAY
-    elif weekday_number == 5:
-        return Weekday.SATURDAY
-    elif weekday_number == 6:
-        return Weekday.SUNDAY
-    raise ValueError("Invalid weekday value")
 
 
 def does_weekly_timeblock_contain_date_time(weekly_timeblock: WeeklyTimeblock, date_time: datetime):
@@ -37,15 +20,7 @@ def does_weekly_timeblock_contain_date_time(weekly_timeblock: WeeklyTimeblock, d
     return True
 
 
-def are_timeblocks_contiguous(
-    start_timeblock: WeeklyTimeblock,
-    end_timeblock: WeeklyTimeblock,
-    all_timeblocks: list[WeeklyTimeblock]
-) -> bool:
-    return True
-
-
-def are_start_time_and_end_time_inside_contiguous_timeblocks(
+def are_start_time_and_end_time_inside_connected_timeblocks(
     start_time: datetime,
     end_time: datetime,
     weekly_timeblocks: list[WeeklyTimeblock],
@@ -60,10 +35,11 @@ def are_start_time_and_end_time_inside_contiguous_timeblocks(
         for weekly_timeblock in weekly_timeblocks
         if does_weekly_timeblock_contain_date_time(weekly_timeblock, end_time)
     ]
-    for start_timeblock in weekly_timeblocks_that_contain_start_time:
-        for end_timeblock in weekly_timeblocks_that_contain_end_time:
-            if are_timeblocks_contiguous(
-                start_timeblock, end_timeblock, all_timeblocks=weekly_timeblocks
-            ):
+    all_timeblocks = [SingleTimeblock(wt) for wt in weekly_timeblocks]
+    for start_weekly_timeblock in weekly_timeblocks_that_contain_start_time:
+        start_timeblock = SingleTimeblock(start_weekly_timeblock)
+        for end_weekly_timeblock in weekly_timeblocks_that_contain_end_time:
+            end_timeblock = SingleTimeblock(end_weekly_timeblock)
+            if are_timeblocks_connected(start_timeblock, end_timeblock, all_timeblocks):
                 return True
     return False
