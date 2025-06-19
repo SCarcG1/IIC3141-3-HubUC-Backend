@@ -1,3 +1,5 @@
+from app.crud.user import create_user
+from app.crud.weekly_timeblocks import create_weekly_timeblock
 from app.database import Base
 from app.models.course import Course
 from app.models.private_lesson import PrivateLesson
@@ -20,30 +22,27 @@ class TestDoesWeeklyTimeblockContainDatetime(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         async with db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        self.tutor = User(**UserCreate(
-            email="tutor@example.com",
-            name="Tutor User",
-            password="tutor_password",
-            role=UserRole.tutor
-        ).model_dump())
         async with SessionLocal() as session:
-            session.add(self.tutor)
-            await session.commit()
-            await session.refresh(self.tutor)
-        self.weekly_timeblock = WeeklyTimeblock(
-            **WeeklyTimeblockCreate(
-                weekday=Weekday.MONDAY,
-                start_hour=time(9),
-                end_hour=time(17),
-                valid_from=datetime(2025, 6, 1, 0, 0),
-                valid_until=datetime(2025, 6, 30, 23, 59)
-            ).model_dump(),
-            user_id=self.tutor.id
-        )
-        async with SessionLocal() as session:
-            session.add(self.weekly_timeblock)
-            await session.commit()
-            await session.refresh(self.weekly_timeblock)
+            self.tutor = await create_user(
+                session,
+                UserCreate(
+                    email="tutor@example.com",
+                    name="Tutor User",
+                    password="tutor_password",
+                    role=UserRole.tutor
+                )
+            )
+            self.weekly_timeblock = await create_weekly_timeblock(
+                session,
+                WeeklyTimeblockCreate(
+                    weekday=Weekday.MONDAY,
+                    start_hour=time(9),
+                    end_hour=time(17),
+                    valid_from=datetime(2025, 6, 1, 0, 0),
+                    valid_until=datetime(2025, 6, 30, 23, 59)
+                ),
+                user_id=self.tutor.id
+            )
 
     async def asyncTearDown(self):
         async with db_engine.begin() as conn:
