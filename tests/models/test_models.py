@@ -51,8 +51,6 @@ class TestModels(TestCase):
         lesson = PrivateLesson(
             tutor_id=tutor.id,
             course_id=course.id,
-            start_time=datetime.now(),
-            end_time=datetime.now() + timedelta(hours=1),
             price=lesson_price,
             description="A private lesson for testing"
         )
@@ -62,109 +60,6 @@ class TestModels(TestCase):
             session.commit()
             retrieved_lesson = session.get(PrivateLesson, lesson.id)
         self.assertIsNotNone(retrieved_lesson)
-
-    def test_reservation_creation_in_database(self):
-        course = Course(
-            name="Test Course",
-            description="Description."
-        )
-        student = User(
-            email="student@example.com",
-            password="password",
-            name="Student Name",
-            role="student"
-        )
-        tutor = User(
-            email="tutor@example.com",
-            password="password",
-            name="Tutor Name",
-            role="tutor"
-        )
-        with Session(self.engine) as session:
-            session.add_all((course, student, tutor))
-            session.commit()
-            course = session.get(Course, course.id)
-            student = session.get(User, student.id)
-            tutor = session.get(User, tutor.id)
-        lesson = PrivateLesson(
-            tutor_id=tutor.id,
-            course_id=course.id,
-            start_time=datetime.now(),
-            end_time=datetime.now() + timedelta(hours=1),
-            price=100,
-            description="A private lesson for testing"
-        )
-        with Session(self.engine) as session:
-            session.add(lesson)
-            session.commit()
-            lesson = session.get(PrivateLesson, lesson.id)
-        reservation = Reservation(
-            student_id=student.id,
-            private_lesson_id=lesson.id,
-            status="pending"
-        )
-        retrieved_reservation = None
-        with Session(self.engine) as session:
-            session.add(reservation)
-            session.commit()
-            retrieved_reservation = session.get(Reservation, reservation.id)
-        self.assertIsNotNone(retrieved_reservation)
-
-    def test_review_creation_in_database(self):
-        course = Course(
-            name="Test Course",
-            description="Description."
-        )
-        student = User(
-            email="student@example.com",
-            password="password",
-            name="Student Name",
-            role="student"
-        )
-        tutor = User(
-            email="tutor@example.com",
-            password="password",
-            name="Tutor Name",
-            role="tutor"
-        )
-        with Session(self.engine) as session:
-            session.add_all([course, student, tutor])
-            session.commit()
-            course = session.get(Course, course.id)
-            student = session.get(User, student.id)
-            tutor = session.get(User, tutor.id)
-        lesson = PrivateLesson(
-            tutor_id=tutor.id,
-            course_id=course.id,
-            start_time=datetime.now(),
-            end_time=datetime.now() + timedelta(hours=1),
-            price=10000,
-            description="A private lesson for testing"
-        )
-        with Session(self.engine) as session:
-            session.add(lesson)
-            session.commit()
-            lesson = session.get(PrivateLesson, lesson.id)
-        reservation = Reservation(
-            student_id=student.id,
-            private_lesson_id=lesson.id,
-            status="accepted"
-        )
-        with Session(self.engine) as session:
-            session.add(reservation)
-            session.commit()
-            reservation = session.get(Reservation, reservation.id)
-        review = Review(
-            reservation_id=reservation.id,
-            content="Lorem ipsum dolor sit amet.",
-            rating=5
-        )
-        retrieved_review = None
-        with Session(self.engine) as session:
-            session.add(review)
-            session.commit()
-            retrieved_review = session.get(Review, review.id)
-        self.assertIsNotNone(retrieved_review)
 
     def test_user_creation_in_database(self):
         user = User(

@@ -49,12 +49,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
             await session.refresh(tutor)
             await session.refresh(course)
 
-            now = datetime.utcnow()
             lesson = PrivateLesson(
                 tutor_id=tutor.id,
                 course_id=course.id,
-                start_time=now,
-                end_time=now + timedelta(hours=1),
                 price=5000,
                 description=None
             )
@@ -70,7 +67,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         data = ReservationCreate(
             student_id=student.id,
             private_lesson_id=lesson.id,
-            status="pending"
+            status="pending",
+            start_time=datetime(2025, 6, 2, 10, 0, 0),
+            end_time=datetime(2025, 6, 2, 11, 0, 0)
         )
         async with AsyncSession(self.engine) as session:
             res = await create_reservation(session, data)
@@ -84,7 +83,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         data = ReservationCreate(
             student_id=student.id,
             private_lesson_id=lesson.id,
-            status="pending"
+            status="pending",
+            start_time=datetime(2025, 6, 2, 10, 0, 0),
+            end_time=datetime(2025, 6, 2, 11, 0, 0)
         )
         async with AsyncSession(self.engine) as session:
             created = await create_reservation(session, data)
@@ -98,7 +99,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         data = ReservationCreate(
             student_id=student.id,
             private_lesson_id=lesson.id,
-            status="pending"
+            status="pending",
+            start_time=datetime(2025, 6, 2, 10, 0, 0),
+            end_time=datetime(2025, 6, 2, 11, 0, 0)
         )
         async with AsyncSession(self.engine) as session:
             created = await create_reservation(session, data)
@@ -113,7 +116,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         data = ReservationCreate(
             student_id=student.id,
             private_lesson_id=lesson.id,
-            status="pending"
+            status="pending",
+            start_time=datetime(2025, 6, 2, 10, 0, 0),
+            end_time=datetime(2025, 6, 2, 11, 0, 0)
         )
         async with AsyncSession(self.engine) as session:
             created = await create_reservation(session, data)
@@ -140,7 +145,9 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         data = ReservationCreate(
             student_id=student.id,
             private_lesson_id=lesson.id,
-            status="pending"
+            status="pending",
+            start_time=datetime(2025, 6, 2, 10, 0, 0),
+            end_time=datetime(2025, 6, 2, 11, 0, 0)
         )
         async with AsyncSession(self.engine) as session:
             created = await create_reservation(session, data)
