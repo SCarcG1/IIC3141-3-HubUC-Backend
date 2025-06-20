@@ -44,8 +44,6 @@ class TestPrivateLessonCrud(IsolatedAsyncioTestCase):
         lesson_data = PrivateLessonCreate(
             tutor_id=tutor.id,
             course_id=course.id,
-            start_time="2023-10-01T10:00:00",
-            end_time="2023-10-01T11:00:00",
             price=10000,
             description="A private lesson for testing"
         )
@@ -75,8 +73,6 @@ class TestPrivateLessonCrud(IsolatedAsyncioTestCase):
         lesson_data = PrivateLessonCreate(
             tutor_id=tutor.id,
             course_id=course.id,
-            start_time="2023-10-02T10:00:00",
-            end_time="2023-10-02T11:00:00",
             price=20000,
             description="Desc prueba"
         )
@@ -109,8 +105,6 @@ class TestPrivateLessonCrud(IsolatedAsyncioTestCase):
         lesson_data = PrivateLessonCreate(
             tutor_id=tutor.id,
             course_id=course.id,
-            start_time="2023-10-03T10:00:00",
-            end_time="2023-10-03T11:00:00",
             price=15000,
             description="Original"
         )
@@ -146,8 +140,6 @@ class TestPrivateLessonCrud(IsolatedAsyncioTestCase):
         lesson_data = PrivateLessonCreate(
             tutor_id=tutor.id,
             course_id=course.id,
-            start_time="2023-10-04T10:00:00",
-            end_time="2023-10-04T11:00:00",
             price=12000,
             description="Para borrar"
         )

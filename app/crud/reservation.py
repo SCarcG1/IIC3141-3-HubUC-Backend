@@ -1,10 +1,54 @@
+from app.crud.private_lesson import get_private_lesson_by_id
+from app.crud.weekly_timeblocks import read_weekly_timeblocks_of_user
+from app.models.private_lesson import PrivateLesson
+from app.models.reservation import Reservation
+from app.schemas.reservation import ReservationCreate, ReservationUpdate
+from app.utilities.weekly_timeblocks import are_start_time_and_end_time_inside_connected_timeblocks
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload, joinedload
-from app.models.reservation import Reservation
-from app.models.private_lesson import PrivateLesson
-from app.schemas.reservation import ReservationCreate, ReservationUpdate
-from app.crud.private_lesson import get_tutors_private_lessons
+from sqlalchemy.orm import selectinload
+
+
+async def validate_reservation(db_session: AsyncSession, reservation_data: ReservationCreate):
+    # Validate that private lesson exists:
+    private_lesson = await get_private_lesson_by_id(db_session, reservation_data.private_lesson_id)
+    if not private_lesson:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Private lesson with ID {reservation_data.private_lesson_id} not found"
+        )
+    # Validate that the reservation is being made in available time blocks:
+    weekly_timeblocks = await read_weekly_timeblocks_of_user(db_session, private_lesson.tutor_id)
+    if not are_start_time_and_end_time_inside_connected_timeblocks(
+        reservation_data.start_time,
+        reservation_data.end_time,
+        weekly_timeblocks
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Reservation start and end times are not within the tutor's available time blocks"
+        )
+    # Validate that the reservation does not overlap with existing reservations:
+    # PENDIENTE
+
+
+async def create_reservation(db: AsyncSession, reservation_data: ReservationCreate):
+    reservation = Reservation(**reservation_data.model_dump())
+    db.add(reservation)
+    await db.commit()
+    await db.refresh(reservation)
+    return reservation
+
+
+async def validate_and_create_reservation(
+    db_session: AsyncSession,
+    reservation_data: ReservationCreate
+):
+    await validate_reservation(db_session, reservation_data)
+    reservation = await create_reservation(db_session, reservation_data)
+    return reservation
+
 
 async def get_all_reservations(db: AsyncSession):
     query = (
@@ -54,17 +98,6 @@ async def get_reservation_by_tutor_id(db: AsyncSession, tutor_id: int):
     result = await db.execute(query)
     return result.scalars().all()
 
-async def create_reservation(db: AsyncSession, reservation: ReservationCreate):
-    db_reservation = Reservation(
-        student_id=reservation.student_id,
-        private_lesson_id=reservation.private_lesson_id,
-        status=reservation.status
-    )
-
-    db.add(db_reservation)
-    await db.commit()
-    await db.refresh(db_reservation)
-    return db_reservation
 
 async def update_reservation(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate):
     db_reservation = await get_reservation_by_id(db, reservation_id)

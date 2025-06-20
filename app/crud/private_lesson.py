@@ -31,8 +31,6 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     db_lesson = PrivateLesson(
         tutor_id=lesson.tutor_id,
         course_id=lesson.course_id,
-        start_time=lesson.start_time.replace(tzinfo=None) if lesson.start_time else None,
-        end_time=lesson.end_time.replace(tzinfo=None) if lesson.end_time else None,
         price=lesson.price,
         description=lesson.description
     )
@@ -60,7 +58,7 @@ async def update_private_lesson(db: AsyncSession, lesson_id: int, lesson: Privat
     if not db_lesson:
         return None
 
-    for key, value in lesson.dict(exclude_unset=True).items():
+    for key, value in lesson.model_dump(exclude_unset=True).items():
         setattr(db_lesson, key, value)
 
     await db.commit()

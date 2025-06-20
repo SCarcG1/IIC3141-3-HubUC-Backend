@@ -8,10 +8,23 @@ from app.auth.auth_handler import verify_password, create_access_token
 from app.auth.auth_bearer import JWTBearer
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut
 from app.crud.course import get_all_courses, get_course_by_id, create_course, update_course, delete_course
-from app.schemas.reservation import ReservationCreate, ReservationOut, ReservationUpdate, ReservationExtendedOut
-from app.crud.reservation import get_all_reservations, get_reservation_by_id, get_reservation_by_student_id, create_reservation, get_reservation_by_tutor_id, update_reservation, delete_reservation
-
+from app.schemas.reservation import (
+    ReservationCreate,
+    ReservationExtendedOut,
+    ReservationOut,
+    ReservationStatus,
+    ReservationUpdate,
+)
+from app.crud.reservation import (
+    delete_reservation,
+    get_all_reservations,
+    get_reservation_by_student_id,
+    get_reservation_by_tutor_id,
+    update_reservation,
+    validate_and_create_reservation,
+)
 from app.api.chat import manager
+from datetime import datetime
 
 router = APIRouter()
 
@@ -111,6 +124,34 @@ async def delete_existing_course(course_id: int, db: AsyncSession = Depends(get_
     return {"detail": f"Course {course_id} deleted"}
 
 ######## Reservation Routes ########
+
+# CREATE
+
+@router.post(
+    "/reservations/lesson/{private_lesson_id}",
+    dependencies=[Depends(JWTBearer())],
+    response_model=ReservationOut,
+)
+async def post_reservation(
+    private_lesson_id: int,
+    start_time: datetime,
+    end_time: datetime,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(JWTBearer())
+):
+    if jwt_payload["role"] != "student":
+        raise HTTPException(status_code=403, detail="Only students can create reservations")
+    reservation_data = ReservationCreate(
+        private_lesson_id=private_lesson_id,
+        student_id = jwt_payload.get("id") or jwt_payload.get("user_id"),
+        status=ReservationStatus.PENDING,
+        start_time=start_time,
+        end_time=end_time
+    )
+    return await validate_and_create_reservation(db, reservation_data)
+
+# READ
+
 @router.get("/reservations", response_model=List[ReservationExtendedOut])
 async def read_reservations(db: AsyncSession = Depends(get_db)):
     return await get_all_reservations(db)
@@ -148,19 +189,7 @@ async def read_tutors_reservations(
         raise HTTPException(status_code=400, detail="Invalid token payload")
     return await get_reservation_by_tutor_id(db, tutor_id)
 
-
-
-@router.post("/reservations/lesson/{private_lesson_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def create_new_reservation(private_lesson_id: int, db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
-    if student["role"] != "student":
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    reservation = ReservationCreate(
-        student_id = student.get("id") or student.get("user_id"),
-        private_lesson_id=private_lesson_id,
-        status="pending"
-    )
-    return await create_reservation(db, reservation)
+# UPDATE
 
 @router.put("/reservations/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
 async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
@@ -168,6 +197,8 @@ async def create_new_reservation(reservation_id: int, reservation: ReservationUp
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return await update_reservation(db, reservation_id, reservation)
+
+# DELETE
 
 @router.delete("/reservations/{reservation_id}", dependencies=[Depends(JWTBearer())])
 async def delete_reservation_endpoint(reservation_id: int, db: AsyncSession = Depends(get_db), token: dict = Depends(JWTBearer())):

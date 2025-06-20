@@ -16,9 +16,6 @@ class PrivateLesson(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("course.id"))
     course = relationship("Course", back_populates="private_lessons")
 
-    start_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
     price: Mapped[int] = mapped_column()
 
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
