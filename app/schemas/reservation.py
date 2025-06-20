@@ -19,6 +19,9 @@ class ReservationBase(BaseModel):
     start_time: datetime
     end_time: datetime
 
+    class Config:
+        from_attributes = True
+
 
 class ReservationCreate(ReservationBase):
     pass
@@ -26,9 +29,6 @@ class ReservationCreate(ReservationBase):
 
 class ReservationOut(ReservationBase):
     id: int
-
-    class Config:
-        orm_mode = True
 
 
 class ReservationExtendedOut(ReservationOut):
@@ -40,4 +40,4 @@ class ReservationUpdate(BaseModel):
     status: Optional[ReservationStatus] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
