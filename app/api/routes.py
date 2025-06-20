@@ -202,10 +202,10 @@ async def create_new_reservation(reservation_id: int, reservation: ReservationUp
 
 @router.delete("/reservations/{reservation_id}", dependencies=[Depends(JWTBearer())])
 async def delete_reservation_endpoint(reservation_id: int, db: AsyncSession = Depends(get_db), token: dict = Depends(JWTBearer())):
-    if token["role"] != "tutor":
+    if token["role"] not in ["tutor", "student"]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    deleted = await delete_reservation(db, reservation_id)
+    deleted = await delete_reservation(db, reservation_id, token["id"], token["role"])
     if not deleted:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return {"detail": f"Reservation {reservation_id} deleted"}

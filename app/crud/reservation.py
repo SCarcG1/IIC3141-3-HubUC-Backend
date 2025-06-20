@@ -109,8 +109,19 @@ async def update_reservation(db: AsyncSession, reservation_id: int, reservation:
     await db.refresh(db_reservation)
     return db_reservation
 
-async def delete_reservation(db: AsyncSession, reservation_id: int):
-    db_reservation = await get_reservation_by_id(db, reservation_id)
+async def delete_reservation(db: AsyncSession, reservation_id: int, user_id: int, user_role: str):
+    if user_role == "student":
+        query = select(Reservation).where(Reservation.id == reservation_id, Reservation.student_id == user_id)
+    elif user_role == "tutor":
+        lesson_ids = (
+            await db.execute(
+                select(PrivateLesson.id).where(PrivateLesson.tutor_id == user_id)
+            )
+        ).scalars().all()
+        query = select(Reservation).where(Reservation.id == reservation_id, Reservation.private_lesson_id.in_(lesson_ids))
+    else:
+        return None
+    db_reservation = (await db.execute(query)).scalar_one_or_none()
     if db_reservation is None:
         return None
     await db.delete(db_reservation)
