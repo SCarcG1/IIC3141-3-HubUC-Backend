@@ -103,7 +103,7 @@ async def update_reservation(db: AsyncSession, reservation_id: int, reservation:
     db_reservation = await get_reservation_by_id(db, reservation_id)
     if db_reservation is None:
         return None
-    for field, value in reservation.dict().items():
+    for field, value in reservation.model_dump().items():
         setattr(db_reservation, field, value)
     await db.commit()
     await db.refresh(db_reservation)
