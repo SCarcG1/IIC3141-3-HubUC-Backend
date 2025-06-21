@@ -14,7 +14,8 @@ from app.crud.user import (
 from app.schemas.user import (
     UserCreate,
     UserLogin,
-    UserOut
+    UserOut,
+    UserUpdate
 )
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,8 +77,8 @@ async def read_student_of_reservation(reservation_id: int, db: AsyncSession = De
     return student
 
 @router.patch("/users/{user_id}", response_model=UserOut, dependencies=[Depends(JWTBearer())])
-async def update_user_endpoint(user_id: int, user_update: UserCreate, db: AsyncSession = Depends(get_db), jwt_payload: dict = Depends(JWTBearer())):
-    if jwt_payload.get("role") != "admin" and jwt_payload.get("id") != user_id:
+async def update_user_data(user_id: int, user_update: UserUpdate, db: AsyncSession = Depends(get_db), jwt_payload: dict = Depends(JWTBearer())):
+    if jwt_payload.get("id") != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     
     updated_user = await update_user(db, user_id, user_update)
