@@ -2,6 +2,7 @@ from app.models.weekly_timeblock import WeeklyTimeblock
 from app.schemas.weekly_timeblock import WeeklyTimeblockCreate, WeeklyTimeblockOut
 from app.utilities.weekly_timeblocks import map_int_weekday_to_enum_weekday
 from datetime import date, datetime
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,3 +35,23 @@ async def read_weekly_timeblocks_of_user(
         )
     result = await db.execute(query)
     return result.scalars().all()
+
+
+async def remove_weekly_timeblock_that_belongs_to_user(
+    db_session: AsyncSession,
+    weekly_timeblock_id: int,
+    user_id: int,
+):
+    weekly_timeblock = await db_session.get(WeeklyTimeblock, weekly_timeblock_id)
+    if not weekly_timeblock:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Weekly timeblock with ID {weekly_timeblock_id} not found."
+        )
+    if weekly_timeblock.user_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Weekly timeblock ID {weekly_timeblock_id} does not belong to user ID {user_id}."
+        )
+    await db_session.delete(weekly_timeblock)
+    await db_session.commit()

@@ -19,14 +19,14 @@ app.dependency_overrides[get_db] = get_db_for_tests
 class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.app = TestClient(app)
+        async with db_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
         self.tutor = User(
             email="tutor@example.com",
             password="tutor_password",
             name="Tutor User",
             role="tutor"
         )
-        async with db_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
         async with SessionLocal() as session:
             session.add_all([self.tutor])
             await session.commit()
@@ -37,6 +37,7 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
             await conn.run_sync(Base.metadata.drop_all)
 
     async def test_post_weekly_timeblock(self):
+        # Arrange:
         weekly_timeblock_json_data = {
             "weekday": "Monday",
             "start_hour": "09:00",
@@ -45,8 +46,7 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
             "valid_until": "2023-12-31",
             "user_id": self.tutor.id
         }
-        expected_weekly_timeblock_data = WeeklyTimeblockBase.model_validate(weekly_timeblock_json_data)
-
+        # Act:
         self.app.post(
             url="/weekly-timeblocks",
             json=weekly_timeblock_json_data,
@@ -56,29 +56,27 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
                 self.tutor.id
             )
         )
-
+        # Assert:
         async with SessionLocal() as session:
             result = await session.execute(select(WeeklyTimeblock))
         db_timeblock = result.scalars().first()
         db_timeblock_data = WeeklyTimeblockBase.model_validate(db_timeblock)
+        expected_weekly_timeblock_data = WeeklyTimeblockBase.model_validate(
+            weekly_timeblock_json_data
+        )
         self.assertEqual(db_timeblock_data, expected_weekly_timeblock_data)
-
-    # async def test_post_weekly_timeblock_without_jwt(self):
-    #     self.assertTrue(False)
-
-    # async def test_post_weekly_timeblock_with_invalid_jwt(self):
-    #     self.assertTrue(False)
     
     async def test_get_all_weekly_timeblocks_of_user(self):
+        # Arrange:
         db_timeblocks = await self.__add_timeblocks_to_the_database()
-        expected_timeblock_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in db_timeblocks
-        ]
-
+        # Act:
         returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
-
+        # Assert:
         returned_timeblock_data = [
             WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+        ]
+        expected_timeblock_data = [
+            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in db_timeblocks
         ]
         self.assertEqual(returned_timeblock_data, expected_timeblock_data)
 
@@ -109,16 +107,34 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         return timeblocks
 
     async def test_get_weekly_timeblocks_of_user_with_on_date_filter(self):
+        # Arrange:
         db_timeblocks = await self.__add_timeblocks_to_the_database()
-        # Only the first timeblock will match the on_date filter:
-        expected_timeblock_data = [WeeklyTimeblockOut.model_validate(db_timeblocks[0])]
-
+        # Act:
         returned_timeblocks = self.app.get(
             f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",  # A valid Monday
         ).json()
-
+        # Assert: only the first timeblock will match the on_date filter.
         returned_timeblocks_data = [
             WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
         ]
+        expected_timeblock_data = [WeeklyTimeblockOut.model_validate(db_timeblocks[0])]
         self.assertEqual(returned_timeblocks_data, expected_timeblock_data)
 
+    async def test_delete_weekly_timeblock(self):
+        # Arrange:
+        db_timeblocks = await self.__add_timeblocks_to_the_database()
+        # Act:
+        timeblock_id_to_delete = db_timeblocks[0].id
+        self.app.delete(
+            f"/weekly-timeblocks/{timeblock_id_to_delete}",
+            headers=get_auth_header_for_tests(
+                self.tutor.email,
+                self.tutor.password,
+                self.tutor.id
+            )
+        )
+        # Assert: the timeblock should be deleted from the database.
+        async with SessionLocal() as session:
+            remaining_timeblocks = (await session.execute(select(WeeklyTimeblock))).scalars().all()
+        self.assertEqual(len(remaining_timeblocks), len(db_timeblocks) - 1)
+        self.assertNotIn(timeblock_id_to_delete, [tb.id for tb in remaining_timeblocks])
