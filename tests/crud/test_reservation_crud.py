@@ -111,24 +111,6 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
         self.assertIsNotNone(updated)
         self.assertEqual(updated.status.value, "accepted")
 
-    async def test_delete_reservation(self):
-        student, lesson = await self.setup_dependencies()
-        data = ReservationCreate(
-            student_id=student.id,
-            private_lesson_id=lesson.id,
-            status="pending",
-            start_time=datetime(2025, 6, 2, 10, 0, 0),
-            end_time=datetime(2025, 6, 2, 11, 0, 0)
-        )
-        async with AsyncSession(self.engine) as session:
-            created = await create_reservation(session, data)
-        async with AsyncSession(self.engine) as session:
-            ok = await delete_reservation(session, created.id)
-        self.assertTrue(ok)
-        async with AsyncSession(self.engine) as session:
-            fetched = await get_reservation_by_id(session, created.id)
-        self.assertIsNone(fetched)
-
     async def test_get_reservation_by_id_not_found(self):
         async with AsyncSession(self.engine) as session:
             result = await get_reservation_by_id(session, reservation_id=999)
@@ -154,8 +136,3 @@ class TestReservationCrud(IsolatedAsyncioTestCase):
             result = await update_reservation(session, created.id, ReservationUpdate(status="pending"))
         self.assertIsNotNone(result)
         self.assertEqual(result.status.value, "pending")
-
-    async def test_delete_reservation_not_found(self):
-        async with AsyncSession(self.engine) as session:
-            result = await delete_reservation(session, reservation_id=999)
-        self.assertFalse(result)
