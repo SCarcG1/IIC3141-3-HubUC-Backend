@@ -60,13 +60,6 @@ async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):
         }
     }
 
-@router.get("/users/{user_id}", response_model=UserOut)
-async def read_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
 @router.get("/protected-route")
 async def protected(data=Depends(JWTBearer())):
     return {"message": f"Hello {data['sub']} with role {data['role']}"}
