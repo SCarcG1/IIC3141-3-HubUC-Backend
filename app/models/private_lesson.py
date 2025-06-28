@@ -1,7 +1,12 @@
 from app.database import Base
-from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Text
-from sqlalchemy.orm import joinedload, Mapped, mapped_column, relationship, selectinload
+from sqlalchemy import ForeignKey, Text
+from sqlalchemy.orm import (
+    joinedload,
+    Mapped,
+    mapped_column,
+    relationship,
+    selectinload
+)
 from typing import Optional
 
 
@@ -23,7 +28,12 @@ class PrivateLesson(Base):
     reservations = relationship("Reservation", back_populates="private_lesson")
 
     @classmethod
-    def get_eager_loading_options(cls, course = True, reservations = False, tutor = True):
+    def get_eager_loading_options(
+        cls,
+        course=True,
+        reservations=False,
+        tutor=True
+    ):
         eager_loading_options = []
         if course:
             eager_loading_options.append(joinedload(cls.course))
