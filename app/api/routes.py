@@ -20,7 +20,7 @@ from app.crud.reservation import (
     get_all_reservations,
     get_reservation_by_student_id,
     get_reservation_by_tutor_id,
-    update_reservation,
+    update_reservation_data_tutor,
     update_reservation_data_student,
     validate_and_create_reservation,
 )
@@ -175,38 +175,26 @@ async def read_tutors_reservations(db: AsyncSession = Depends(get_db),payload: d
 
 # UPDATE
 
-@router.put("/reservations/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
+@router.put("/reservations/tutor/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+async def update_reservation_tutor(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
     if tutor["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
     
-    # Ensure that the tutor is the one updating the reservation
-    if reservation.tutor_id is not None and reservation.tutor_id != (tutor.get("user_id") or tutor.get("id")):
-        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
-    
-    # Ensure the reservation sent has the tutor_id
-    if reservation.tutor_id is None:
-        reservation.tutor_id = tutor.get("user_id") or tutor.get("id")
-    
-    updated = await update_reservation(db, reservation_id, reservation)
+    user_id = tutor.get("user_id") or tutor.get("id")
+
+    updated = await update_reservation_data_tutor(db, reservation_id, reservation, user_id)
     if not updated:
         raise HTTPException(status_code=404, detail="Reservation not found or you are not allowed to update it")
     return updated
 
-@router.patch("/reservations/{reservation_id}/student", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+@router.patch("/reservations/student/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
 async def update_reservation_student(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
     if student["role"] != "student":
         raise HTTPException(status_code=403, detail="Forbidden")
     
-    # Ensure that the student is the one updating the reservation
-    if reservation.student_id is not None and reservation.student_id != (student.get("user_id") or student.get("id")):
-        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
-    
-    # Ensure the reservation sent has the student_id
-    if reservation.student_id is None:
-        reservation.student_id = student.get("user_id") or student.get("id")
+    user_id = student.get("user_id") or student.get("id")
 
-    updated = await update_reservation_data_student(db, reservation_id, reservation) # Different from the other update_reservation, this one ensure no changes to private_lesson_id or status
+    updated = await update_reservation_data_student(db, reservation_id, reservation, user_id) # Different from the other update_reservation, this one ensure no changes to private_lesson_id or status
     if not updated:
         raise HTTPException(status_code=404, detail="Reservation not found or you are not allowed to update it")
     return updated
