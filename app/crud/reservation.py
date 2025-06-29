@@ -18,6 +18,7 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=404,
             detail=f"Private lesson with ID {reservation_data.private_lesson_id} not found"
         )
+    
     # Validate that the reservation is being made in available time blocks:
     weekly_timeblocks = await read_weekly_timeblocks_of_user(db_session, private_lesson.tutor_id)
     if not are_start_time_and_end_time_inside_connected_timeblocks(
@@ -29,6 +30,7 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=400,
             detail="Reservation start and end times are not within the tutor's available time blocks"
         )
+    
     # Validate that the reservation does not overlap with existing reservations:
     existing_reservations = await db_session.execute(
         select(Reservation).where(
@@ -42,6 +44,35 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=400,
             detail="Reservation times overlap with an existing reservation"
         )
+
+    # Validate that there is no other reservation for the same student at the same time, where there is a reservation that was accepted:
+    student_reservations = await db_session.execute(
+        select(Reservation).where(
+            Reservation.student_id == reservation_data.student_id,
+            Reservation.start_time < reservation_data.end_time,
+            Reservation.end_time > reservation_data.start_time,
+            Reservation.status == "accepted"  # Only check for accepted reservations
+        )
+    )
+    if student_reservations.scalars().first():
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an accepted reservation at this time"
+        )
+
+    # PENDING: Descomentar en caso de que se quiera validar que el estudiante no esté ya inscrito en la lección privada:
+    # # Validate that the student is not already enrolled in the private lesson:
+    # student_reservations = await db_session.execute(
+    #     select(Reservation).where(
+    #         Reservation.private_lesson_id == reservation_data.private_lesson_id,
+    #         Reservation.student_id == reservation_data.student_id
+    #     )
+    # )
+    # if student_reservations.scalars().first():
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="You are already enrolled in this private lesson"
+    #     )
 
 
 async def create_reservation(db: AsyncSession, reservation_data: ReservationCreate):
