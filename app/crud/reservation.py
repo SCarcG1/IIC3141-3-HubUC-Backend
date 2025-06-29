@@ -109,6 +109,30 @@ async def update_reservation(db: AsyncSession, reservation_id: int, reservation:
     await db.refresh(db_reservation)
     return db_reservation
 
+async def update_reservation_data_student(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate):
+    db_reservation = await get_reservation_by_id(db, reservation_id)
+    if db_reservation is None:
+        return None
+    
+    # Ensure that the student_id of db_reservation matches the student_id in the reservation update
+    if db_reservation.student_id != reservation.student_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
+    
+    # Don't allow changing the private lesson ID if the reservation is being updated by a student
+    if ('private_lesson_id' in reservation.model_dump() and db_reservation.private_lesson_id != reservation.private_lesson_id):
+        raise HTTPException(status_code=400, detail="Forbidden: You cannot change the private lesson or status")
+
+    # Only allow updating the status if the change is to 'rejected'
+    if 'status' in reservation.model_dump() and reservation.status != 'rejected':
+        raise HTTPException(status_code=400, detail="Forbidden: You can only change the status to 'rejected' to cancel the reservation")
+
+    for field, value in reservation.model_dump().items():
+        setattr(db_reservation, field, value)
+    
+    await db.commit()
+    await db.refresh(db_reservation)
+    return db_reservation
+
 async def delete_reservation(db: AsyncSession, reservation_id: int, user_id: int, user_role: str):
     if user_role == "student":
         query = select(Reservation).where(Reservation.id == reservation_id, Reservation.student_id == user_id)

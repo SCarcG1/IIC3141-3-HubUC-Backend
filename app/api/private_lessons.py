@@ -53,15 +53,30 @@ async def read_private_lesson_by_id(lesson_id: int, db: AsyncSession = Depends(g
     return lesson
 
 @router.patch("/private-lessons/{lesson_id}", response_model=PrivateLessonOut, dependencies=[Depends(JWTBearer())])
-async def update_lesson(lesson_id: int, lesson: PrivateLessonUpdate, db: AsyncSession = Depends(get_db)):
+async def update_lesson(lesson_id: int, lesson: PrivateLessonUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
+    # Ensure that the user is a tutor
+    if tutor.get("role") != "tutor":
+        raise HTTPException(status_code=403, detail="Forbidden: You must be a tutor to update lessons")
+    
+    # Ensure that the tutor is the one updating the reservation
+    if lesson.tutor_id is not None and lesson.tutor_id != (tutor.get("user_id") or tutor.get("id")):
+        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own lessons")
+    
+    # Ensure the lesson sent has the tutor_id
+    if lesson.tutor_id is None:
+        lesson.tutor_id = tutor.get("user_id") or tutor.get("id")
+
     updated = await update_private_lesson(db, lesson_id, lesson)
     if not updated:
         raise HTTPException(status_code=404, detail="Private lesson not found")
     return updated
 
 @router.delete("/private-lessons/{lesson_id}", dependencies=[Depends(JWTBearer())])
-async def delete_lesson(lesson_id: int, db: AsyncSession = Depends(get_db)):
-    deleted = await delete_private_lesson(db, lesson_id)
+async def delete_lesson(lesson_id: int, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
+    # Ensure that the user is a tutor
+    if tutor.get("role") != "tutor":
+        raise HTTPException(status_code=403, detail="Forbidden: You must be a tutor to delete lessons")
+    deleted = await delete_private_lesson(db, lesson_id, tutor["id"])
     if not deleted:
         raise HTTPException(status_code=404, detail="Private lesson not found")
     return {"detail": f"Private lesson {lesson_id} deleted"}

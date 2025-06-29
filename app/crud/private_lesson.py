@@ -1,7 +1,8 @@
+from http.client import HTTPException
 from sqlalchemy import and_, func, select 
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.private_lesson import PrivateLesson
-from app.schemas.private_lesson import PrivateLessonCreate
+from app.schemas.private_lesson import PrivateLessonCreate, PrivateLessonUpdate
 
 async def get_all_private_lessons(db: AsyncSession):
     eager_loading_options = PrivateLesson.get_eager_loading_options(
@@ -40,24 +41,30 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     return db_lesson
 
 
-async def delete_private_lesson(db: AsyncSession, lesson_id: int):
+async def delete_private_lesson(db: AsyncSession, lesson_id: int, tutor_id: int):
     result = await db.execute(
         select(PrivateLesson).where(PrivateLesson.id == lesson_id)
     )
     db_lesson = result.scalar_one_or_none()
     if not db_lesson:
         return None
-
+    # Ensure that the tutor_id of db_lesson matches the tutor_id in the request
+    if db_lesson.tutor_id != tutor_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You can only delete your own lessons")
     await db.delete(db_lesson)
     await db.commit()
     return True
 
-async def update_private_lesson(db: AsyncSession, lesson_id: int, lesson: PrivateLessonCreate):
+async def update_private_lesson(db: AsyncSession, lesson_id: int, lesson: PrivateLessonUpdate):
     result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
     db_lesson = result.scalar_one_or_none()
     if not db_lesson:
         return None
 
+    # Ensure that the tutor_id of db_lesson matches the tutor_id in the lesson update
+    if db_lesson.tutor_id != lesson.tutor_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own lessons")
+    
     for key, value in lesson.model_dump(exclude_unset=True).items():
         setattr(db_lesson, key, value)
 
