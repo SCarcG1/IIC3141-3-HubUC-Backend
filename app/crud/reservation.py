@@ -118,10 +118,13 @@ async def update_reservation_data_student(db: AsyncSession, reservation_id: int,
     if db_reservation.student_id != reservation.student_id:
         raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
     
-    # Don't allow changing the private lesson ID, or status if the reservation is being updated by a student
-    if ('private_lesson_id' in reservation.model_dump() and db_reservation.private_lesson_id != reservation.private_lesson_id) or \
-       ('status' in reservation.model_dump() and db_reservation.status != reservation.status):
+    # Don't allow changing the private lesson ID if the reservation is being updated by a student
+    if ('private_lesson_id' in reservation.model_dump() and db_reservation.private_lesson_id != reservation.private_lesson_id):
         raise HTTPException(status_code=400, detail="Forbidden: You cannot change the private lesson or status")
+
+    # Only allow updating the status if the change is to 'rejected'
+    if 'status' in reservation.model_dump() and reservation.status != 'rejected':
+        raise HTTPException(status_code=400, detail="Forbidden: You can only change the status to 'rejected' to cancel the reservation")
 
     for field, value in reservation.model_dump().items():
         setattr(db_reservation, field, value)
