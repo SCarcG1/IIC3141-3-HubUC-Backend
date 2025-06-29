@@ -175,7 +175,7 @@ async def read_tutors_reservations(db: AsyncSession = Depends(get_db),payload: d
 
 # UPDATE
 
-@router.put("/reservations/tutor/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+@router.patch("/reservations/tutor/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
 async def update_reservation_tutor(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
     if tutor["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
