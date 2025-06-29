@@ -133,11 +133,12 @@ async def post_reservation(
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(JWTBearer())
 ):
+    user_id = jwt_payload.get("id") or jwt_payload.get("user_id")
     if jwt_payload["role"] != "student":
         raise HTTPException(status_code=403, detail="Only students can create reservations")
     reservation_data = ReservationCreate(
         private_lesson_id=private_lesson_id,
-        student_id = jwt_payload.get("id") or jwt_payload.get("user_id"),
+        student_id=user_id,
         status=ReservationStatus.PENDING,
         start_time=start_time,
         end_time=end_time

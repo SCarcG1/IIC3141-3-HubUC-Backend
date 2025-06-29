@@ -30,7 +30,18 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             detail="Reservation start and end times are not within the tutor's available time blocks"
         )
     # Validate that the reservation does not overlap with existing reservations:
-    # PENDIENTE
+    existing_reservations = await db_session.execute(
+        select(Reservation).where(
+            Reservation.private_lesson_id == reservation_data.private_lesson_id,
+            Reservation.start_time < reservation_data.end_time,
+            Reservation.end_time > reservation_data.start_time
+        )
+    )
+    if existing_reservations.scalars().first():
+        raise HTTPException(
+            status_code=400,
+            detail="Reservation times overlap with an existing reservation"
+        )
 
 
 async def create_reservation(db: AsyncSession, reservation_data: ReservationCreate):
