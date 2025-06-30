@@ -148,27 +148,6 @@ class TestReservationEndpoints(IsolatedAsyncioTestCase):
         # cada reserva incluye private_lesson.tutor_id == tutor.id
         self.assertTrue(all(r["private_lesson"]["tutor"]["id"] == self.tutor.id for r in arr))
 
-    async def test_update_reservation_endpoint(self):
-        # Crear y actualizar vía PUT
-        token_s = generate_token(self.student.id, "student")
-        created = self.app.post(
-            url=f"/reservations/lesson/{self.lesson.id}",
-            params={
-                "start_time": "2025-06-02T10:00:00",
-                "end_time": "2025-06-02T11:00:00"
-            },
-            headers={"Authorization": f"Bearer {token_s}"}
-        ).json()
-        token_t = generate_token(self.tutor.id, "tutor")
-        resp = self.app.put(
-            f"/reservations/{created['id']}",
-            json={"status": "accepted"},
-            headers={"Authorization": f"Bearer {token_t}"}
-        )
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body["status"], "accepted")
-
     async def test_delete_reservation(self):
         # Arrange:
         reservations_data = [

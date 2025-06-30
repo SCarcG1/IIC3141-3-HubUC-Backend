@@ -12,6 +12,14 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
+# Import models here to ensure they are registered:
+from app.models.course import Course
+from app.models.private_lesson import PrivateLesson
+from app.models.reservation import Reservation
+from app.models.review import Review
+from app.models.user import User
+from app.models.weekly_timeblock import WeeklyTimeblock
+
 # Add your model's MetaData object here
 # for 'autogenerate' support.
 target_metadata = Base.metadata

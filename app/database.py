@@ -13,7 +13,7 @@ SessionLocal: sessionmaker[AsyncSession] = sessionmaker(engine, class_=AsyncSess
 
 class Base(DeclarativeBase):
     '''
-    `Base = declarative_base()` is superseded by `class Base(DeclarativeBase)` in SQLAlchemy 2.0.
+    Base class for all database models in TeacherUC.
     '''
     pass
 
