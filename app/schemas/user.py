@@ -10,6 +10,7 @@ class UserRole(str, Enum):
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
+    number: Optional[str] = None
     password: str
     role: UserRole
 
@@ -17,6 +18,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str
+    number: Optional[str] = None
     role: UserRole
 
     class Config:
@@ -29,6 +31,7 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+    number: Optional[str] = None
     password: Optional[str] = None
 
     class Config:

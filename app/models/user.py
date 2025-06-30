@@ -2,6 +2,7 @@ from app.database import Base
 from enum import Enum as PythonEnum
 from sqlalchemy import String, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
 
 
 class UserRole(str, PythonEnum):
@@ -17,6 +18,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
     password: Mapped[str] = mapped_column(String)
     name: Mapped[str] = mapped_column(String)
+    number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.student)
 
     private_lessons = relationship("PrivateLesson", back_populates="tutor")
