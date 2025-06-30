@@ -9,6 +9,7 @@ async def create_user(db: AsyncSession, user: UserCreate):
     db_user = User(
         email=user.email,
         name=user.name,
+        number=user.number,
         password=get_password_hash(user.password),
         role=user.role
     )
@@ -80,6 +81,8 @@ async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate):
         db_user.name = user_update.name
     if user_update.email is not None:
         db_user.email = user_update.email
+    if user_update.number is not None:
+        db_user.number = user_update.number
     if user_update.password is not None:
         db_user.password = get_password_hash(user_update.password)
 
