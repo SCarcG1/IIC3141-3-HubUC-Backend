@@ -87,3 +87,29 @@ async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate):
     await db.commit()
     await db.refresh(db_user)
     return db_user
+
+
+class UserCRUD:
+    def __init__(self, db_session: AsyncSession):
+        self.db_session = db_session
+
+    async def create(self, user_data: UserCreate):
+        return await create_user(self.db_session, user_data)
+
+    async def read_all(self):
+        return await get_all_users(self.db_session)
+
+    async def read_by_email(self, email: str):
+        return await get_user_by_email(self.db_session, email)
+
+    async def read_by_id(self, user_id: int):
+        return await get_user_by_id(self.db_session, user_id)
+
+    async def read_full_data_by_id(self, user_id: int, user_role: str):
+        return await get_full_data_of_user(self.db_session, user_id, user_role)
+
+    async def read_by_role(self, role: str):
+        return await get_all_users_by_role(self.db_session, role)
+
+    async def update(self, user_id: int, user_data: UserUpdate):
+        return await update_user(self.db_session, user_id, user_data)
