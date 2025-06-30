@@ -1,8 +1,9 @@
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
-from app.schemas.private_lesson import OfferStatus, PrivateLessonCreate
+from app.schemas.private_lesson import OfferStatus, PrivateLessonCreate, PrivateLessonUpdate
 from app.schemas.reservation import ReservationStatus
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,19 +51,21 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     await db.refresh(db_lesson)
     return db_lesson
 
-
+  
 async def update_private_lesson(
     db: AsyncSession,
     lesson_id: int,
     lesson: PrivateLessonCreate
 ):
-    result = await db.execute(
-        select(PrivateLesson).where(PrivateLesson.id == lesson_id)
-    )
+    result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
     db_lesson = result.scalar_one_or_none()
     if not db_lesson:
         return None
 
+    # Ensure that the tutor_id of db_lesson matches the tutor_id in the lesson update
+    if db_lesson.tutor_id != lesson.tutor_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own lessons")
+    
     for key, value in lesson.model_dump(exclude_unset=True).items():
         setattr(db_lesson, key, value)
 
