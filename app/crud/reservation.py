@@ -2,6 +2,7 @@ from app.crud.private_lesson import get_private_lesson_by_id
 from app.crud.weekly_timeblocks import read_weekly_timeblocks_of_user
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
+from app.schemas.private_lesson import OfferStatus
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
 from app.utilities.weekly_timeblocks import are_start_time_and_end_time_inside_connected_timeblocks
 from fastapi import HTTPException
@@ -17,6 +18,13 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
         raise HTTPException(
             status_code=404,
             detail=f"Private lesson with ID {reservation_data.private_lesson_id} not found"
+        )
+    
+    # Validate that the private lesson is not closed:
+    if private_lesson.offer_status == OfferStatus.CLOSED:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create reservation for a closed private lesson"
         )
     
     # Validate that the reservation is being made in available time blocks:

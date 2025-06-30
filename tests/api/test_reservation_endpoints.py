@@ -184,3 +184,29 @@ class TestReservationEndpoints(IsolatedAsyncioTestCase):
             remaining_reservations = (await db_session.execute(select(Reservation))).scalars().all()
         self.assertEqual(len(remaining_reservations), len(reservations) - 1)
         self.assertNotIn(reservations[0].id, [r.id for r in remaining_reservations])
+
+    async def test_cannot_create_reservation_for_closed_lesson(self):
+        # Arrange: Close the lesson
+        async with SessionLocal() as session:
+            self.lesson.offer_status = "closed"
+            session.add(self.lesson)
+            await session.commit()
+            await session.refresh(self.lesson)
+        
+        # Act: Try to create a reservation for the closed lesson
+        response = self.app.post(
+            url=f"/reservations/lesson/{self.lesson.id}",
+            params={
+                "start_time": "2025-06-02T10:00:00",
+                "end_time": "2025-06-02T11:00:00"
+            },
+            headers=get_auth_header_for_tests(
+                email=self.student.email,
+                role=UserRole.student,
+                user_id=self.student.id
+            ),
+        )
+        
+        # Assert: Should return 400 error
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Cannot create reservation for a closed private lesson", response.json()["detail"])
