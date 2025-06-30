@@ -3,6 +3,7 @@ from app.api.private_lessons import router as private_lessons_router
 from app.api.routes import router
 from app.api.weekly_timeblocks import router as weekly_timeblocks_router
 from app.api.user import router as user_router
+from app.api.reviews import router as reviews_router
 from app.database import init_db, SessionLocal
 from app.seeds.seed import seed_data
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,3 +38,4 @@ app.include_router(private_lessons_router)
 app.include_router(router)
 app.include_router(weekly_timeblocks_router)
 app.include_router(user_router)
+app.include_router(reviews_router)
