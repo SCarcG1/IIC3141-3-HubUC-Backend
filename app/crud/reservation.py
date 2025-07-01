@@ -156,6 +156,25 @@ async def get_reservation_by_tutor_id(db: AsyncSession, tutor_id: int):
     return result.scalars().all()
 
 
+async def get_reservation_by_tutor_and_student(db: AsyncSession, tutor_id: int, student_id: int):
+    """Obtener una reserva específica entre un tutor y un estudiante"""
+    query = (
+        select(Reservation)
+        .join(PrivateLesson, Reservation.private_lesson_id == PrivateLesson.id)
+        .where(
+            PrivateLesson.tutor_id == tutor_id,
+            Reservation.student_id == student_id
+        )
+        .options(
+            selectinload(Reservation.student),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
+            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
+        )
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
 async def update_reservation_data_tutor(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate, user_id: int):
     db_reservation = await get_reservation_by_id(db, reservation_id)
     if db_reservation is None:

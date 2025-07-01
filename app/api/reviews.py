@@ -118,6 +118,30 @@ async def get_lesson_reviews(
     return await get_reviews_by_private_lesson_id(db_session, private_lesson_id)
 
 
+@router.get(
+    "/reviews/my-reviews",
+    response_model=List[ReviewOut],
+    dependencies=[Depends(JWTBearer())],
+)
+async def get_my_reviews(
+    db_session: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(JWTBearer()),
+):
+    """Obtener las reviews del usuario autenticado"""
+    user_id = jwt_payload.get("id") or jwt_payload.get("user_id")
+    user_role = jwt_payload.get("role")
+    
+    if user_role == "student":
+        return await get_reviews_by_student_id(db_session, user_id)
+    elif user_role == "tutor":
+        return await get_reviews_by_tutor_id(db_session, user_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students and tutors can view reviews"
+        )
+
+
 # UPDATE
 @router.patch(
     "/reviews/{review_id}",
