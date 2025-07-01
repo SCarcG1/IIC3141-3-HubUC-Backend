@@ -20,6 +20,7 @@ from app.crud.reservation import (
     get_all_reservations,
     get_reservation_by_student_id,
     get_reservation_by_tutor_id,
+    get_reservation_by_tutor_and_student,
     update_reservation_data_tutor,
     update_reservation_data_student,
     validate_and_create_reservation,
@@ -173,6 +174,36 @@ async def read_tutors_reservations(db: AsyncSession = Depends(get_db),payload: d
     if tutor_id is None:
         raise HTTPException(status_code=400, detail="Invalid token payload")
     return await get_reservation_by_tutor_id(db, tutor_id)
+
+
+@router.get("/reservations/tutor/{tutor_id}/student/{student_id}", response_model=List[ReservationExtendedOut], dependencies=[Depends(JWTBearer())])
+async def read_reservation_by_tutor_and_student(
+    tutor_id: int,
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(JWTBearer())
+):
+    """Obtener reservas específicas entre un tutor y un estudiante"""
+    # Verificar que el usuario autenticado es el tutor o el estudiante
+    user_id = payload.get("user_id") or payload.get("id")
+    user_role = payload.get("role")
+    
+    if user_role == "tutor" and user_id != tutor_id:
+        raise HTTPException(status_code=403, detail="You can only view your own reservations")
+    elif user_role == "student" and user_id != student_id:
+        raise HTTPException(status_code=403, detail="You can only view your own reservations")
+    elif user_role not in ["tutor", "student"]:
+        raise HTTPException(status_code=403, detail="Only tutors and students can view reservations")
+    
+    reservations = await get_reservation_by_tutor_and_student(db, tutor_id, student_id)
+    
+    if not reservations:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No reservations found between tutor {tutor_id} and student {student_id}"
+        )
+    
+    return reservations
 
 # UPDATE
 
