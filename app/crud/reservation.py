@@ -2,7 +2,6 @@ from app.crud.private_lesson import get_private_lesson_by_id
 from app.crud.weekly_timeblocks import read_weekly_timeblocks_of_user
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
-from app.schemas.private_lesson import OfferStatus
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
 from app.utilities.weekly_timeblocks import are_start_time_and_end_time_inside_connected_timeblocks
 from fastapi import HTTPException
@@ -19,14 +18,6 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=404,
             detail=f"Private lesson with ID {reservation_data.private_lesson_id} not found"
         )
-    
-    # Validate that the private lesson is not closed:
-    if private_lesson.offer_status == OfferStatus.CLOSED:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot create reservation for a closed private lesson"
-        )
-    
     # Validate that the reservation is being made in available time blocks:
     weekly_timeblocks = await read_weekly_timeblocks_of_user(db_session, private_lesson.tutor_id)
     if not are_start_time_and_end_time_inside_connected_timeblocks(
@@ -38,49 +29,8 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=400,
             detail="Reservation start and end times are not within the tutor's available time blocks"
         )
-    
     # Validate that the reservation does not overlap with existing reservations:
-    existing_reservations = await db_session.execute(
-        select(Reservation).where(
-            Reservation.private_lesson_id == reservation_data.private_lesson_id,
-            Reservation.start_time < reservation_data.end_time,
-            Reservation.end_time > reservation_data.start_time
-        )
-    )
-    if existing_reservations.scalars().first():
-        raise HTTPException(
-            status_code=400,
-            detail="Reservation times overlap with an existing reservation"
-        )
-
-    # Validate that there is no other reservation for the same student at the same time, where there is a reservation that was accepted:
-    student_reservations = await db_session.execute(
-        select(Reservation).where(
-            Reservation.student_id == reservation_data.student_id,
-            Reservation.start_time < reservation_data.end_time,
-            Reservation.end_time > reservation_data.start_time,
-            Reservation.status == "accepted"  # Only check for accepted reservations
-        )
-    )
-    if student_reservations.scalars().first():
-        raise HTTPException(
-            status_code=400,
-            detail="You already have an accepted reservation at this time"
-        )
-
-    # PENDING: Descomentar en caso de que se quiera validar que el estudiante no esté ya inscrito en la lección privada:
-    # # Validate that the student is not already enrolled in the private lesson:
-    # student_reservations = await db_session.execute(
-    #     select(Reservation).where(
-    #         Reservation.private_lesson_id == reservation_data.private_lesson_id,
-    #         Reservation.student_id == reservation_data.student_id
-    #     )
-    # )
-    # if student_reservations.scalars().first():
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="You are already enrolled in this private lesson"
-    #     )
+    # PENDIENTE
 
 
 async def create_reservation(db: AsyncSession, reservation_data: ReservationCreate):
@@ -113,14 +63,7 @@ async def get_all_reservations(db: AsyncSession):
     return result.scalars().all()
 
 async def get_reservation_by_id(db: AsyncSession, reservation_id: int):
-    result = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
-        .options(
-            selectinload(Reservation.student),
-            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
-            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
-        )
-    )
+    result = await db.execute(select(Reservation).where(Reservation.id == reservation_id))
     return result.scalar_one_or_none()
 
 async def get_reservation_by_student_id(db: AsyncSession, student_id: int):
@@ -156,50 +99,12 @@ async def get_reservation_by_tutor_id(db: AsyncSession, tutor_id: int):
     return result.scalars().all()
 
 
-async def update_reservation_data_tutor(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate, user_id: int):
+async def update_reservation(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate):
     db_reservation = await get_reservation_by_id(db, reservation_id)
     if db_reservation is None:
         return None
-    
-    # Ensure that the tutor_id of db_reservation matches the user_id in the reservation update
-    if db_reservation.private_lesson.tutor_id != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden: You can only update reservations for your own private lessons")
-    
-    # Don't allow changing the student ID if the reservation is being updated by a tutor
-    if ('student_id' in reservation.model_dump() and db_reservation.student_id != reservation.student_id):
-        raise HTTPException(status_code=400, detail="Forbidden: You cannot change the student of the reservation")
-    
-    # Only allow updating the status if the change is to 'accepted' or 'rejected'
-    if 'status' in reservation.model_dump() and reservation.status not in ['accepted', 'rejected']:
-        raise HTTPException(status_code=400, detail="Forbidden: You can only change the status to 'accepted' or 'rejected'")
-
     for field, value in reservation.model_dump().items():
         setattr(db_reservation, field, value)
-    
-    await db.commit()
-    await db.refresh(db_reservation)
-    return db_reservation
-
-async def update_reservation_data_student(db: AsyncSession, reservation_id: int, reservation: ReservationUpdate, user_id: int):
-    db_reservation = await get_reservation_by_id(db, reservation_id)
-    if db_reservation is None:
-        return None
-    
-    # Ensure that the student_id of db_reservation matches the student_id in the reservation update
-    if db_reservation.student_id != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
-    
-    # Don't allow changing the private lesson ID if the reservation is being updated by a student
-    if ('private_lesson_id' in reservation.model_dump() and db_reservation.private_lesson_id != reservation.private_lesson_id):
-        raise HTTPException(status_code=400, detail="Forbidden: You cannot change the private lesson or status")
-
-    # Only allow updating the status if the change is to 'rejected'
-    if 'status' in reservation.model_dump() and reservation.status != 'rejected':
-        raise HTTPException(status_code=400, detail="Forbidden: You can only change the status to 'rejected' to cancel the reservation")
-
-    for field, value in reservation.model_dump().items():
-        setattr(db_reservation, field, value)
-    
     await db.commit()
     await db.refresh(db_reservation)
     return db_reservation

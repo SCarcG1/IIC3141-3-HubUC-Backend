@@ -148,6 +148,27 @@ class TestReservationEndpoints(IsolatedAsyncioTestCase):
         # cada reserva incluye private_lesson.tutor_id == tutor.id
         self.assertTrue(all(r["private_lesson"]["tutor"]["id"] == self.tutor.id for r in arr))
 
+    async def test_update_reservation_endpoint(self):
+        # Crear y actualizar vía PUT
+        token_s = generate_token(self.student.id, "student")
+        created = self.app.post(
+            url=f"/reservations/lesson/{self.lesson.id}",
+            params={
+                "start_time": "2025-06-02T10:00:00",
+                "end_time": "2025-06-02T11:00:00"
+            },
+            headers={"Authorization": f"Bearer {token_s}"}
+        ).json()
+        token_t = generate_token(self.tutor.id, "tutor")
+        resp = self.app.put(
+            f"/reservations/{created['id']}",
+            json={"status": "accepted"},
+            headers={"Authorization": f"Bearer {token_t}"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["status"], "accepted")
+
     async def test_delete_reservation(self):
         # Arrange:
         reservations_data = [
@@ -184,29 +205,3 @@ class TestReservationEndpoints(IsolatedAsyncioTestCase):
             remaining_reservations = (await db_session.execute(select(Reservation))).scalars().all()
         self.assertEqual(len(remaining_reservations), len(reservations) - 1)
         self.assertNotIn(reservations[0].id, [r.id for r in remaining_reservations])
-
-    async def test_cannot_create_reservation_for_closed_lesson(self):
-        # Arrange: Close the lesson
-        async with SessionLocal() as session:
-            self.lesson.offer_status = "closed"
-            session.add(self.lesson)
-            await session.commit()
-            await session.refresh(self.lesson)
-        
-        # Act: Try to create a reservation for the closed lesson
-        response = self.app.post(
-            url=f"/reservations/lesson/{self.lesson.id}",
-            params={
-                "start_time": "2025-06-02T10:00:00",
-                "end_time": "2025-06-02T11:00:00"
-            },
-            headers=get_auth_header_for_tests(
-                email=self.student.email,
-                role=UserRole.student,
-                user_id=self.student.id
-            ),
-        )
-        
-        # Assert: Should return 400 error
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Cannot create reservation for a closed private lesson", response.json()["detail"])
