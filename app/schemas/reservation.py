@@ -37,8 +37,6 @@ class ReservationExtendedOut(ReservationOut):
 
 
 class ReservationUpdate(BaseModel):
-    private_lesson_id: Optional[int] = None
-    student_id: Optional[int] = None
     status: Optional[ReservationStatus] = None
 
     class Config:

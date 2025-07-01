@@ -20,8 +20,7 @@ from app.crud.reservation import (
     get_all_reservations,
     get_reservation_by_student_id,
     get_reservation_by_tutor_id,
-    update_reservation_data_tutor,
-    update_reservation_data_student,
+    update_reservation,
     validate_and_create_reservation,
 )
 from app.api.chat import manager
@@ -133,12 +132,11 @@ async def post_reservation(
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(JWTBearer())
 ):
-    user_id = jwt_payload.get("id") or jwt_payload.get("user_id")
     if jwt_payload["role"] != "student":
         raise HTTPException(status_code=403, detail="Only students can create reservations")
     reservation_data = ReservationCreate(
         private_lesson_id=private_lesson_id,
-        student_id=user_id,
+        student_id = jwt_payload.get("id") or jwt_payload.get("user_id"),
         status=ReservationStatus.PENDING,
         start_time=start_time,
         end_time=end_time
@@ -151,9 +149,14 @@ async def post_reservation(
 async def read_reservations(db: AsyncSession = Depends(get_db)):
     return await get_all_reservations(db)
 
-@router.get("/reservations/student", response_model=List[ReservationExtendedOut], dependencies=[Depends(JWTBearer())]
+@router.get(
+    "/reservations/student",
+    response_model=List[ReservationExtendedOut],
+    dependencies=[Depends(JWTBearer())]
 )
-async def read_students_reservations(db: AsyncSession = Depends(get_db), payload: dict = Depends(JWTBearer())
+async def read_students_reservations(
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(JWTBearer())
 ):
     if payload.get("role") != "student":
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -163,9 +166,14 @@ async def read_students_reservations(db: AsyncSession = Depends(get_db), payload
     return await get_reservation_by_student_id(db, student_id)
 
 
-@router.get("/reservations/tutor", response_model=List[ReservationExtendedOut], dependencies=[Depends(JWTBearer())]
+@router.get(
+    "/reservations/tutor",
+    response_model=List[ReservationExtendedOut],
+    dependencies=[Depends(JWTBearer())]
 )
-async def read_tutors_reservations(db: AsyncSession = Depends(get_db),payload: dict = Depends(JWTBearer())
+async def read_tutors_reservations(
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(JWTBearer())
 ):
     if payload.get("role") != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -176,29 +184,12 @@ async def read_tutors_reservations(db: AsyncSession = Depends(get_db),payload: d
 
 # UPDATE
 
-@router.patch("/reservations/tutor/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def update_reservation_tutor(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
+@router.put("/reservations/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
+async def create_new_reservation(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), tutor: dict = Depends(JWTBearer())):
     if tutor["role"] != "tutor":
         raise HTTPException(status_code=403, detail="Forbidden")
-    
-    user_id = tutor.get("user_id") or tutor.get("id")
 
-    updated = await update_reservation_data_tutor(db, reservation_id, reservation, user_id)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Reservation not found or you are not allowed to update it")
-    return updated
-
-@router.patch("/reservations/student/{reservation_id}", response_model=ReservationOut, dependencies=[Depends(JWTBearer())])
-async def update_reservation_student(reservation_id: int, reservation: ReservationUpdate, db: AsyncSession = Depends(get_db), student: dict = Depends(JWTBearer())):
-    if student["role"] != "student":
-        raise HTTPException(status_code=403, detail="Forbidden")
-    
-    user_id = student.get("user_id") or student.get("id")
-
-    updated = await update_reservation_data_student(db, reservation_id, reservation, user_id) # Different from the other update_reservation, this one ensure no changes to private_lesson_id or status
-    if not updated:
-        raise HTTPException(status_code=404, detail="Reservation not found or you are not allowed to update it")
-    return updated
+    return await update_reservation(db, reservation_id, reservation)
 
 # DELETE
 
