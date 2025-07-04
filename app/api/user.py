@@ -9,7 +9,8 @@ from app.crud.user import (
     get_all_users_by_role,
     get_tutor_of_private_lesson,
     get_student_of_reservation,
-    update_user
+    update_user,
+    delete_user
 )
 from app.schemas.user import (
     UserCreate,
@@ -86,3 +87,39 @@ async def update_user_data(user_id: int, user_update: UserUpdate, db: AsyncSessi
         raise HTTPException(status_code=404, detail="User not found")
     
     return updated_user
+
+@router.delete("/users/{user_id}", dependencies=[Depends(JWTBearer())])
+async def delete_user_endpoint(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    jwt_payload: dict = Depends(JWTBearer())
+):
+    """
+    Elimina un usuario y todas sus relaciones asociadas.
+    
+    Solo el propio usuario o un administrador puede eliminar la cuenta.
+    """
+    # Verificar que el usuario existe
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    # Verificar autorización: solo el propio usuario o un admin puede eliminar
+    requesting_user_id = jwt_payload.get("id")
+    requesting_user_role = jwt_payload.get("role")
+    
+    if requesting_user_role != "admin" and requesting_user_id != user_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="No tienes permisos para eliminar este usuario"
+        )
+    
+    # Ejecutar la eliminación
+    success = await delete_user(db, user_id)
+    if not success:
+        raise HTTPException(
+            status_code=500, 
+            detail="Error al eliminar el usuario"
+        )
+    
+    return {"message": "Usuario eliminado exitosamente"}
