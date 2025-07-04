@@ -2,8 +2,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from app.models.user import User
+from app.models.private_lesson import PrivateLesson
+from app.models.reservation import Reservation
+from app.models.review import Review
+from app.models.weekly_timeblock import WeeklyTimeblock
 from app.schemas.user import UserCreate, UserUpdate
 from app.auth.auth_handler import get_password_hash
+from fastapi import HTTPException
 
 async def create_user(db: AsyncSession, user: UserCreate):
     db_user = User(
@@ -91,6 +96,71 @@ async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate):
     await db.refresh(db_user)
     return db_user
 
+async def delete_user(db: AsyncSession, user_id: int):
+    """
+    Elimina un usuario y todas sus relaciones asociadas.
+    
+    Esta función maneja la eliminación en cascada de:
+    - Private lessons (si es tutor)
+    - Reservations (si es estudiante o tutor)
+    - Reviews (relacionadas con las reservations)
+    - Weekly timeblocks
+    """
+    # Obtener el usuario con todas sus relaciones
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return None
+    
+    # Eliminar weekly timeblocks del usuario
+    weekly_timeblocks = await db.execute(
+        select(WeeklyTimeblock).where(WeeklyTimeblock.user_id == user_id)
+    )
+    for timeblock in weekly_timeblocks.scalars().all():
+        await db.delete(timeblock)
+    
+    if user.role == "tutor":
+        # Si es tutor, eliminar sus private lessons y todas las reservations asociadas
+        private_lessons = await db.execute(
+            select(PrivateLesson).where(PrivateLesson.tutor_id == user_id)
+        )
+        for lesson in private_lessons.scalars().all():
+            # Eliminar reviews de las reservations de esta lesson
+            lesson_reservations = await db.execute(
+                select(Reservation).where(Reservation.private_lesson_id == lesson.id)
+            )
+            for reservation in lesson_reservations.scalars().all():
+                # Eliminar reviews de esta reservation
+                reviews = await db.execute(
+                    select(Review).where(Review.reservation_id == reservation.id)
+                )
+                for review in reviews.scalars().all():
+                    await db.delete(review)
+                # Eliminar la reservation
+                await db.delete(reservation)
+            # Eliminar la private lesson
+            await db.delete(lesson)
+    
+    elif user.role == "student":
+        # Si es estudiante, eliminar sus reservations y las reviews asociadas
+        reservations = await db.execute(
+            select(Reservation).where(Reservation.student_id == user_id)
+        )
+        for reservation in reservations.scalars().all():
+            # Eliminar reviews de esta reservation
+            reviews = await db.execute(
+                select(Review).where(Review.reservation_id == reservation.id)
+            )
+            for review in reviews.scalars().all():
+                await db.delete(review)
+            # Eliminar la reservation
+            await db.delete(reservation)
+    
+    # Finalmente, eliminar el usuario
+    await db.delete(user)
+    await db.commit()
+    
+    return True
+
 
 class UserCRUD:
     def __init__(self, db_session: AsyncSession):
@@ -116,3 +186,6 @@ class UserCRUD:
 
     async def update(self, user_id: int, user_data: UserUpdate):
         return await update_user(self.db_session, user_id, user_data)
+
+    async def delete(self, user_id: int):
+        return await delete_user(self.db_session, user_id)
