@@ -1,13 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from app.crud.private_lesson import PrivateLessonCRUD
 from app.models.user import User
-from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
 from app.models.review import Review
 from app.models.weekly_timeblock import WeeklyTimeblock
+from app.schemas.reservation import ReservationStatus
 from app.schemas.user import UserCreate, UserUpdate
 from app.auth.auth_handler import get_password_hash
+from datetime import datetime
 
 
 async def create_user(db: AsyncSession, user: UserCreate):
@@ -143,10 +145,9 @@ async def delete_user(db: AsyncSession, user_id: int):
     if user.role == "tutor":
         # Si es tutor, eliminar sus private lessons
         # y todas las reservations asociadas
-        private_lessons = await db.execute(
-            select(PrivateLesson).where(PrivateLesson.tutor_id == user_id)
-        )
-        for lesson in private_lessons.scalars().all():
+        private_lesson_crud = PrivateLessonCRUD(db)
+        private_lessons = await private_lesson_crud.read_by_tutor_id(user_id)
+        for lesson in private_lessons:
             # Eliminar reviews de las reservations de esta lesson
             lesson_reservations = await db.execute(
                 select(Reservation).where(
@@ -162,13 +163,19 @@ async def delete_user(db: AsyncSession, user_id: int):
                 )
                 for review in reviews.scalars().all():
                     await db.delete(review)
-                # Eliminar la reservation
-                await db.delete(reservation)
+                # Si la reservación aún no se ha llevado a cabo,
+                # se rechaza:
+                if (
+                    reservation.status == ReservationStatus.PENDING or
+                    reservation.start_time > datetime.now()
+                ):
+                    reservation.status = ReservationStatus.REJECTED
+                    db.add(reservation)
             # Eliminar la private lesson
-            await db.delete(lesson)
+            await private_lesson_crud.delete(lesson.id)
 
     elif user.role == "student":
-        # Si es estudiante, eliminar sus reservations y las reviews asociadas
+        # Si es estudiante, eliminar las reviews asociadas a sus reservaciones:
         reservations = await db.execute(
             select(Reservation).where(Reservation.student_id == user_id)
         )
@@ -179,8 +186,14 @@ async def delete_user(db: AsyncSession, user_id: int):
             )
             for review in reviews.scalars().all():
                 await db.delete(review)
-            # Eliminar la reservation
-            await db.delete(reservation)
+            # Si la reservación aún no se ha llevado a cabo,
+            # se rechaza automáticamente:
+            if (
+                reservation.status == ReservationStatus.PENDING or
+                reservation.start_time > datetime.now()
+            ):
+                reservation.status = ReservationStatus.REJECTED
+                db.add(reservation)
 
     # Finalmente, eliminar el usuario
     await db.delete(user)

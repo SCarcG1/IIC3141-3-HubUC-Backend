@@ -11,7 +11,7 @@ class OfferStatus(str, Enum):
 
 
 class PrivateLessonBase(BaseModel):
-    tutor_id: int
+    tutor_id: int | None
     course_id: int
     price: int
     description: Optional[str] = None
@@ -27,7 +27,7 @@ class PrivateLessonOut(PrivateLessonBase):
 
 class PrivateLessonExtendedOut(PrivateLessonOut):
     course: CourseOut
-    tutor: UserOut
+    tutor: UserOut | None
 
 
 class PrivateLessonCreate(PrivateLessonBase):
