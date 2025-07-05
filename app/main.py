@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.courses import router as courses_router
 from app.api.private_lessons import router as private_lessons_router
 from app.api.reservations import router as reservations_router
 from app.api.reviews import router as reviews_router
@@ -40,6 +41,7 @@ def read_root():
     return {"message": "FastAPI + PostgreSQL on Render"}
 
 
+app.include_router(courses_router)
 app.include_router(private_lessons_router)
 app.include_router(reservations_router)
 app.include_router(reviews_router)
