@@ -134,15 +134,6 @@ async def read_reservation_by_tutor_and_student(
         db, tutor_id, student_id
     )
 
-    if not reservations:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"No reservations found between tutor {tutor_id} "
-                f"and student {student_id}"
-            )
-        )
-
     return reservations
 
 
