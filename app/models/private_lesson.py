@@ -20,7 +20,10 @@ class PrivateLesson(Base):
 
     # Foreign keys and their relationships:
 
-    tutor_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    tutor_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"),
+        nullable=True
+    )
     tutor = relationship("User", back_populates="private_lessons")
 
     course_id: Mapped[int] = mapped_column(ForeignKey("course.id"))

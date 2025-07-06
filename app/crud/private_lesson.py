@@ -1,6 +1,6 @@
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
-from app.schemas.private_lesson import OfferStatus, PrivateLessonCreate, PrivateLessonUpdate
+from app.schemas.private_lesson import OfferStatus, PrivateLessonCreate
 from app.schemas.reservation import ReservationStatus
 from datetime import datetime
 from fastapi import HTTPException
@@ -51,21 +51,27 @@ async def create_private_lesson(db: AsyncSession, lesson: PrivateLessonCreate):
     await db.refresh(db_lesson)
     return db_lesson
 
-  
+
 async def update_private_lesson(
     db: AsyncSession,
     lesson_id: int,
     lesson: PrivateLessonCreate
 ):
-    result = await db.execute(select(PrivateLesson).where(PrivateLesson.id == lesson_id))
+    result = await db.execute(select(PrivateLesson).where(
+        PrivateLesson.id == lesson_id
+    ))
     db_lesson = result.scalar_one_or_none()
     if not db_lesson:
         return None
 
-    # Ensure that the tutor_id of db_lesson matches the tutor_id in the lesson update
+    # Ensure that the tutor_id of db_lesson
+    # matches the tutor_id in the lesson update
     if db_lesson.tutor_id != lesson.tutor_id:
-        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own lessons")
-    
+        raise HTTPException(
+            status_code=403,
+            detail="You can only update your own lessons"
+        )
+
     for key, value in lesson.model_dump(exclude_unset=True).items():
         setattr(db_lesson, key, value)
 
@@ -183,11 +189,14 @@ class PrivateLessonCRUD:
 
     # DELETE
 
-    async def close(self, lesson_id: int):
+    async def delete(self, lesson_id: int):
         '''
         For a private lesson, "delete" means to close the lesson offer.
         Thus, `close()` is used as the `DELETE` of the private lessons' CRUD.
         '''
+        return await self.close(lesson_id)
+
+    async def close(self, lesson_id: int):
         lesson = await self.db_session.get(PrivateLesson, lesson_id)
         lesson.offer_status = OfferStatus.CLOSED
         await self.db_session.commit()
