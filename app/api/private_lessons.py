@@ -26,9 +26,19 @@ router = APIRouter()
 )
 async def post_lesson(
     lesson: PrivateLessonCreate,
-    db_session: AsyncSession = Depends(get_db)
+    db_session: AsyncSession = Depends(get_db),
+    token: dict = Depends(JWTBearer())
 ):
     crud = PrivateLessonCRUD(db_session)
+    # Ensure that the user is a tutor
+    if token.get("role") != "tutor":
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You must be a tutor to create lessons"
+        )
+    # Ensure that the tutor_id is set to the user_id from the token
+    if lesson.tutor_id is None or lesson.tutor_id != (token.get("user_id") or token.get("id")):
+        lesson.tutor_id = token.get("user_id") or token.get("id")
     return await crud.create(lesson)
 
 
