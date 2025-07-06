@@ -1,5 +1,5 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
-from app.utilities.single_timeblocks import SingleTimeblock
+from app.schemas.single_timeblock import SingleTimeblock
 from app.utilities.weekdays import map_int_weekday_to_enum_weekday
 from datetime import datetime
 

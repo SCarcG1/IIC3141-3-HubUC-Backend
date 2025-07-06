@@ -1,17 +1,19 @@
 from app.crud.private_lesson import get_private_lesson_by_id
-from app.crud.weekly_timeblocks import read_weekly_timeblocks_of_user
+from app.crud.user import UserCRUD
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
 from app.schemas.private_lesson import OfferStatus
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
-from app.utilities.weekly_timeblocks import are_start_time_and_end_time_inside_connected_timeblocks
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 
-async def validate_reservation(db_session: AsyncSession, reservation_data: ReservationCreate):
+async def validate_reservation(
+    db_session: AsyncSession,
+    reservation_data: ReservationCreate
+):
     # Validate that private lesson exists:
     private_lesson = await get_private_lesson_by_id(db_session, reservation_data.private_lesson_id)
     if not private_lesson:
@@ -19,47 +21,35 @@ async def validate_reservation(db_session: AsyncSession, reservation_data: Reser
             status_code=404,
             detail=f"Private lesson with ID {reservation_data.private_lesson_id} not found"
         )
-    
+
     # Validate that the private lesson is not closed:
     if private_lesson.offer_status == OfferStatus.CLOSED:
         raise HTTPException(
             status_code=400,
             detail="Cannot create reservation for a closed private lesson"
         )
-    
-    # Validate that the reservation is being made in available time blocks:
-    weekly_timeblocks = await read_weekly_timeblocks_of_user(db_session, private_lesson.tutor_id)
-    if not are_start_time_and_end_time_inside_connected_timeblocks(
-        reservation_data.start_time,
-        reservation_data.end_time,
-        weekly_timeblocks
+
+    # Validate that the tutor is available at the requested time:
+    user_crud = UserCRUD(db_session)
+    if not await user_crud.is_user_available_on_datetime_range(
+        user_id=private_lesson.tutor_id,
+        from_datetime=reservation_data.start_time,
+        to_datetime=reservation_data.end_time
     ):
         raise HTTPException(
             status_code=400,
-            detail="Reservation start and end times are not within the tutor's available time blocks"
-        )
-    
-    # Validate that the reservation does not overlap with existing reservations:
-    existing_reservations = await db_session.execute(
-        select(Reservation).where(
-            Reservation.private_lesson_id == reservation_data.private_lesson_id,
-            Reservation.start_time < reservation_data.end_time,
-            Reservation.end_time > reservation_data.start_time
-        )
-    )
-    if existing_reservations.scalars().first():
-        raise HTTPException(
-            status_code=400,
-            detail="Reservation times overlap with an existing reservation"
+            detail="Tutor is not available at the requested time"
         )
 
-    # Validate that there is no other reservation for the same student at the same time, where there is a reservation that was accepted:
+    # Validate that there is no other reservation
+    # for the same student at the same time,
+    # where there is a reservation that was accepted:
     student_reservations = await db_session.execute(
         select(Reservation).where(
             Reservation.student_id == reservation_data.student_id,
             Reservation.start_time < reservation_data.end_time,
             Reservation.end_time > reservation_data.start_time,
-            Reservation.status == "accepted"  # Only check for accepted reservations
+            Reservation.status == "accepted"
         )
     )
     if student_reservations.scalars().first():

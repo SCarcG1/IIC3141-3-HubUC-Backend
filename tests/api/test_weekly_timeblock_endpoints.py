@@ -4,7 +4,10 @@ from app.main import app
 from app.models.user import User
 from app.models.weekly_timeblock import WeeklyTimeblock
 from app.schemas.weekday import Weekday
-from app.schemas.weekly_timeblock import WeeklyTimeblockBase, WeeklyTimeblockOut
+from app.schemas.weekly_timeblock import (
+    WeeklyTimeblockBase,
+    WeeklyTimeblockOut
+)
 from datetime import datetime, time
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -65,18 +68,22 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
             weekly_timeblock_json_data
         )
         self.assertEqual(db_timeblock_data, expected_weekly_timeblock_data)
-    
+
     async def test_get_all_weekly_timeblocks_of_user(self):
         # Arrange:
         db_timeblocks = await self.__add_timeblocks_to_the_database()
         # Act:
-        returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
+        returned_timeblocks = self.app.get(
+            f"/weekly-timeblocks/{self.tutor.id}"
+        ).json()
         # Assert:
         returned_timeblock_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in returned_timeblocks
         ]
         expected_timeblock_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in db_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in db_timeblocks
         ]
         self.assertEqual(returned_timeblock_data, expected_timeblock_data)
 
@@ -111,13 +118,16 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         db_timeblocks = await self.__add_timeblocks_to_the_database()
         # Act:
         returned_timeblocks = self.app.get(
-            f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",  # A valid Monday
-        ).json()
+            f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",
+        ).json()  # A valid Monday
         # Assert: only the first timeblock will match the on_date filter.
         returned_timeblocks_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in returned_timeblocks
         ]
-        expected_timeblock_data = [WeeklyTimeblockOut.model_validate(db_timeblocks[0])]
+        expected_timeblock_data = [
+            WeeklyTimeblockOut.model_validate(db_timeblocks[0])
+        ]
         self.assertEqual(returned_timeblocks_data, expected_timeblock_data)
 
     async def test_delete_weekly_timeblock(self):
@@ -135,6 +145,11 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         )
         # Assert: the timeblock should be deleted from the database.
         async with SessionLocal() as session:
-            remaining_timeblocks = (await session.execute(select(WeeklyTimeblock))).scalars().all()
+            remaining_timeblocks = (await session.execute(
+                select(WeeklyTimeblock)
+            )).scalars().all()
         self.assertEqual(len(remaining_timeblocks), len(db_timeblocks) - 1)
-        self.assertNotIn(timeblock_id_to_delete, [tb.id for tb in remaining_timeblocks])
+        self.assertNotIn(
+            timeblock_id_to_delete,
+            [tb.id for tb in remaining_timeblocks]
+        )
