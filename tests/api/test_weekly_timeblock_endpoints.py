@@ -61,13 +61,19 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
                 self.tutor.id
             )
         )
-        # Assert:
+        # Assert: the timeblock was created in the database
+        # with the same data as the one sent in the request,
+        # except for the valid_until field, which should be set
+        # automatically set to the end of the day (23:59:59).
         async with SessionLocal() as session:
             result = await session.execute(select(WeeklyTimeblock))
         db_timeblock = result.scalars().first()
         db_timeblock_data = WeeklyTimeblockBase.model_validate(db_timeblock)
         expected_weekly_timeblock_data = WeeklyTimeblockBase.model_validate(
             weekly_timeblock_json_data
+        )
+        expected_weekly_timeblock_data.valid_until = datetime(
+            2023, 12, 31, 23, 59, 59
         )
         self.assertEqual(db_timeblock_data, expected_weekly_timeblock_data)
 
