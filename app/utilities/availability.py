@@ -35,7 +35,6 @@ class AvailabilityService:
                 from_datetime=datetime.combine(on_date, block.start_hour),
                 to_datetime=datetime.combine(on_date, block.end_hour),
             ):
-                print("AVAILABLE ON", block)
                 available_blocks.append(block)
         return available_blocks
 
@@ -74,7 +73,6 @@ class AvailabilityService:
             to_datetime,
             user.weekly_timeblocks
         ):
-            print("NOT AVAILABLE ON", from_datetime, to_datetime)
             return False
         # If the tutor has an accepted reservation in any time within the
         # range, then the tutor is not available.
@@ -103,9 +101,7 @@ class AvailabilityService:
                 )
             )
             reservations = reservations.scalars().all()
-            print("RESERVATIONS:", reservations)
             if len(reservations) > 0:
-                print("NOT AVAILABLE ON", from_datetime, to_datetime)
                 return False
         # Otherwise, the tutor is available.
         return True

@@ -280,7 +280,6 @@ class TestTimeblockEndpoints(IsolatedAsyncioTestCase):
             f"/timeblocks/{self.tutor['id']}",
             params={"on_date": "2025-07-14"}
         ).json()
-        print("DELETE LATER:", blocks)
         # ASSERT: only the second block should have been returned,
         # as there is a reservation during the first one.
         blocks = [
