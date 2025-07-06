@@ -1,8 +1,8 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
+from app.schemas.weekday import Weekday
 from app.utilities.weekdays import map_enum_weekday_to_int_weekday
 from datetime import time
 from pydantic import BaseModel
-from weekday import Weekday
 
 
 class SingleTimeblock(BaseModel):
