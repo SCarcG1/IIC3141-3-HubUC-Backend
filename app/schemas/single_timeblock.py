@@ -1,28 +1,28 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
+from app.schemas.weekday import Weekday
 from app.utilities.weekdays import map_enum_weekday_to_int_weekday
 from datetime import time
 from pydantic import BaseModel
-from weekday import Weekday
 
 
 class SingleTimeblock(BaseModel):
     weekday: Weekday
-    weekday_index: int
-    start_time: time
-    end_time: time
+    weekday_index: int | None = None
+    start_hour: time
+    end_hour: time
 
     @staticmethod
     def are_adjacent(block: 'SingleTimeblock', other: 'SingleTimeblock'):
         if block.weekday_index != other.weekday_index:
             return False
         if (
-            block.start_time <= other.start_time and
-            other.start_time <= block.end_time
+            block.start_hour <= other.start_hour and
+            other.start_hour <= block.end_hour
         ):
             return True
         if (
-            other.start_time <= block.start_time and
-            block.start_time <= other.end_time
+            other.start_hour <= block.start_hour and
+            block.start_hour <= other.end_hour
         ):
             return True
         return False
@@ -34,8 +34,8 @@ class SingleTimeblock(BaseModel):
             weekday_index=map_enum_weekday_to_int_weekday(
                 weekly_timeblock.weekday
             ),
-            start_time=weekly_timeblock.start_hour,
-            end_time=weekly_timeblock.end_hour
+            start_hour=weekly_timeblock.start_hour,
+            end_hour=weekly_timeblock.end_hour
         )
 
     @staticmethod
@@ -54,7 +54,7 @@ class SingleTimeblock(BaseModel):
         # We'll work with sorted timeblocks:
         all_timeblocks = sorted(
             all_timeblocks,
-            key=lambda t: (t.weekday_index, t.start_time)
+            key=lambda t: (t.weekday_index, t.start_hour)
         )
         # Initialize a half matrix to store the results of the connections:
         connected: dict[int, dict[int, bool]] = {}

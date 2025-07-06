@@ -11,6 +11,7 @@ from app.schemas.weekly_timeblock import (
     WeeklyTimeblockCreate,
     WeeklyTimeblockOut
 )
+from app.utilities.availability import AvailabilityService
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,27 +68,22 @@ async def get_weekly_timeblocks_of_user(
     ),
     response_model=list[SingleTimeblock]
 )
-async def get_available_timeblocks_of_user(
+async def get_available_single_timeblocks_of_user(
     user_id: int,
     on_date: date,
     db_session: AsyncSession = Depends(get_db),
 ):
-    weekly_timeblocks = await read_weekly_timeblocks_of_user(
-        db_session,
-        user_id,
-        on_date
-    )
-    blocks = SingleTimeblock.from_weekly_timeblocks(weekly_timeblocks)
     user_crud = UserCRUD(db_session)
-    available_blocks = []
-    for block in blocks:
-        if await user_crud.is_user_available_on_datetime_range(
-            user_id,
-            block.start_time,
-            block.end_time
-        ):
-            available_blocks.append(block)
-    return available_blocks
+    if not await user_crud.exists(user_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"User with ID {user_id} not found"
+        )
+    availability_service = AvailabilityService(db_session)
+    return await availability_service.get_available_single_timeblocks_of_user(
+        user_id=user_id,
+        on_date=on_date
+    )
 
 
 # DELETE

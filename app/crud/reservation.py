@@ -1,9 +1,9 @@
 from app.crud.private_lesson import get_private_lesson_by_id
-from app.crud.user import UserCRUD
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
 from app.schemas.private_lesson import OfferStatus
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
+from app.utilities.availability import AvailabilityService
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -30,8 +30,8 @@ async def validate_reservation(
         )
 
     # Validate that the tutor is available at the requested time:
-    user_crud = UserCRUD(db_session)
-    if not await user_crud.is_user_available_on_datetime_range(
+    availability_service = AvailabilityService(db_session)
+    if not await availability_service.is_user_available_on_datetime_range(
         user_id=private_lesson.tutor_id,
         from_datetime=reservation_data.start_time,
         to_datetime=reservation_data.end_time
@@ -219,11 +219,11 @@ async def update_reservation_data_student(db: AsyncSession, reservation_id: int,
     db_reservation = await get_reservation_by_id(db, reservation_id)
     if db_reservation is None:
         return None
-    
+
     # Ensure that the student_id of db_reservation matches the student_id in the reservation update
     if db_reservation.student_id != user_id:
         raise HTTPException(status_code=403, detail="Forbidden: You can only update your own reservations")
-    
+
     # Don't allow changing the private lesson ID if the reservation is being updated by a student
     if ('private_lesson_id' in reservation.model_dump() and db_reservation.private_lesson_id != reservation.private_lesson_id):
         raise HTTPException(status_code=400, detail="Forbidden: You cannot change the private lesson or status")
@@ -234,7 +234,7 @@ async def update_reservation_data_student(db: AsyncSession, reservation_id: int,
 
     for field, value in reservation.model_dump().items():
         setattr(db_reservation, field, value)
-    
+
     await db.commit()
     await db.refresh(db_reservation)
     return db_reservation
