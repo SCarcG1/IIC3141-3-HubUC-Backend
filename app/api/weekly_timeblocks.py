@@ -79,13 +79,14 @@ async def get_available_timeblocks_of_user(
     )
     blocks = SingleTimeblock.from_weekly_timeblocks(weekly_timeblocks)
     user_crud = UserCRUD(db_session)
-    available_blocks = [
-        tb for tb in blocks if await user_crud.is_user_available_on_datetime_range(
+    available_blocks = []
+    for block in blocks:
+        if await user_crud.is_user_available_on_datetime_range(
             user_id,
-            tb.start_time,
-            tb.end_time
-        )
-    ]
+            block.start_time,
+            block.end_time
+        ):
+            available_blocks.append(block)
     return available_blocks
 
 
