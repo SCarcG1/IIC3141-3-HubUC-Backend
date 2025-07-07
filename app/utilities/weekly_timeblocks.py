@@ -1,10 +1,13 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
-from app.utilities.single_timeblocks import SingleTimeblock
+from app.schemas.single_timeblock import SingleTimeblock
 from app.utilities.weekdays import map_int_weekday_to_enum_weekday
 from datetime import datetime
 
 
-def does_weekly_timeblock_contain_date_time(weekly_timeblock: WeeklyTimeblock, date_time: datetime):
+def does_weekly_timeblock_contain_date_time(
+    weekly_timeblock: WeeklyTimeblock,
+    date_time: datetime
+):
     weekday_number = date_time.weekday()
     weekday = map_int_weekday_to_enum_weekday(weekday_number)
     if date_time < weekly_timeblock.valid_from:

@@ -1,10 +1,15 @@
 from app.api.routes import get_db
 from app.database import Base
 from app.main import app
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.weekly_timeblock import WeeklyTimeblock
+from app.schemas.reservation import ReservationStatus
+from app.schemas.single_timeblock import SingleTimeblock
 from app.schemas.weekday import Weekday
-from app.schemas.weekly_timeblock import WeeklyTimeblockBase, WeeklyTimeblockOut
+from app.schemas.weekly_timeblock import (
+    WeeklyTimeblockBase,
+    WeeklyTimeblockOut
+)
 from datetime import datetime, time
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -56,7 +61,10 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
                 self.tutor.id
             )
         )
-        # Assert:
+        # Assert: the timeblock was created in the database
+        # with the same data as the one sent in the request,
+        # except for the valid_until field, which should be set
+        # automatically set to the end of the day (23:59:59).
         async with SessionLocal() as session:
             result = await session.execute(select(WeeklyTimeblock))
         db_timeblock = result.scalars().first()
@@ -64,19 +72,26 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         expected_weekly_timeblock_data = WeeklyTimeblockBase.model_validate(
             weekly_timeblock_json_data
         )
+        expected_weekly_timeblock_data.valid_until = datetime(
+            2023, 12, 31, 23, 59, 59
+        )
         self.assertEqual(db_timeblock_data, expected_weekly_timeblock_data)
-    
+
     async def test_get_all_weekly_timeblocks_of_user(self):
         # Arrange:
         db_timeblocks = await self.__add_timeblocks_to_the_database()
         # Act:
-        returned_timeblocks = self.app.get(f"/weekly-timeblocks/{self.tutor.id}").json()
+        returned_timeblocks = self.app.get(
+            f"/weekly-timeblocks/{self.tutor.id}"
+        ).json()
         # Assert:
         returned_timeblock_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in returned_timeblocks
         ]
         expected_timeblock_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in db_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in db_timeblocks
         ]
         self.assertEqual(returned_timeblock_data, expected_timeblock_data)
 
@@ -111,13 +126,16 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         db_timeblocks = await self.__add_timeblocks_to_the_database()
         # Act:
         returned_timeblocks = self.app.get(
-            f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",  # A valid Monday
-        ).json()
+            f"/weekly-timeblocks/{self.tutor.id}?on_date=2025-06-02",
+        ).json()  # A valid Monday
         # Assert: only the first timeblock will match the on_date filter.
         returned_timeblocks_data = [
-            WeeklyTimeblockOut.model_validate(timeblock) for timeblock in returned_timeblocks
+            WeeklyTimeblockOut.model_validate(timeblock)
+            for timeblock in returned_timeblocks
         ]
-        expected_timeblock_data = [WeeklyTimeblockOut.model_validate(db_timeblocks[0])]
+        expected_timeblock_data = [
+            WeeklyTimeblockOut.model_validate(db_timeblocks[0])
+        ]
         self.assertEqual(returned_timeblocks_data, expected_timeblock_data)
 
     async def test_delete_weekly_timeblock(self):
@@ -135,6 +153,148 @@ class TestWeeklyTimeblockEndpoints(IsolatedAsyncioTestCase):
         )
         # Assert: the timeblock should be deleted from the database.
         async with SessionLocal() as session:
-            remaining_timeblocks = (await session.execute(select(WeeklyTimeblock))).scalars().all()
+            remaining_timeblocks = (await session.execute(
+                select(WeeklyTimeblock)
+            )).scalars().all()
         self.assertEqual(len(remaining_timeblocks), len(db_timeblocks) - 1)
-        self.assertNotIn(timeblock_id_to_delete, [tb.id for tb in remaining_timeblocks])
+        self.assertNotIn(
+            timeblock_id_to_delete,
+            [tb.id for tb in remaining_timeblocks]
+        )
+
+
+class TestTimeblockEndpoints(IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.app = TestClient(app)
+        async with db_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        self.course = self.app.post(
+            "/courses",
+            json={
+                "name": "Course",
+                "description": "Description.",
+            }
+        ).json()
+        self.tutor = self.app.post(
+            "/register",
+            json={
+                "email": "tutor@example.com",
+                "name": "Tutor",
+                "password": "password",
+                "role": UserRole.tutor
+            }
+        ).json()
+        self.tutor_token = self.app.post(
+            "/login",
+            json={
+                "email": self.tutor["email"],
+                "password": "password"
+            }
+        ).json()["access_token"]
+        self.lesson = self.app.post(
+            "/private-lessons",
+            headers={"Authorization": f"Bearer {self.tutor_token}"},
+            json={
+                "course_id": self.course["id"],
+                "tutor_id": self.tutor["id"],
+                "price": 100,
+                "description": "Description.",
+            }
+        ).json()
+        self.weekly_timeblocks = [
+            self.app.post(
+                "/weekly-timeblocks",
+                headers={"Authorization": f"Bearer {self.tutor_token}"},
+                json={
+                    "weekday": Weekday.MONDAY,
+                    "start_hour": "10:00",
+                    "end_hour": "11:00",
+                    "valid_from": "2025-07-01",
+                    "valid_until": "2025-07-31",
+                }
+            ).json(),
+            self.app.post(
+                "/weekly-timeblocks",
+                headers={"Authorization": f"Bearer {self.tutor_token}"},
+                json={
+                    "weekday": Weekday.MONDAY,
+                    "start_hour": "11:00",
+                    "end_hour": "12:00",
+                    "valid_from": "2025-07-01",
+                    "valid_until": "2025-07-31",
+                }
+            ).json(),
+        ]
+        self.student = self.app.post(
+            "/register",
+            json={
+                "email": "student@example.com",
+                "name": "Student",
+                "password": "password",
+                "role": UserRole.student
+            }
+        ).json()
+        self.student_token = self.app.post(
+            "/login",
+            json={
+                "email": self.student["email"],
+                "password": "password"
+            }
+        ).json()["access_token"]
+
+    async def asyncTearDown(self):
+        async with db_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+
+    async def test_when_there_are_no_accepted_reservations(self):
+        # ACT:
+        blocks = self.app.get(
+            f"/timeblocks/{self.tutor['id']}",
+            params={"on_date": "2025-07-14"}
+        ).json()
+        # ASSERT: all timeblocks should be returned for the given date.
+        blocks = [
+            SingleTimeblock.model_validate(b)
+            for b in blocks
+        ]
+        for block in blocks:
+            block.weekday_index = None
+        expected_blocks = [
+            SingleTimeblock.model_validate(b)
+            for b in self.weekly_timeblocks
+        ]
+        self.assertEqual(blocks, expected_blocks)
+
+    async def test_when_there_are_accepted_reservations(self):
+        # ARRANGE: create and accept a reservation
+        # that overlaps with the first timeblock.
+        reservation = self.app.post(
+            f"/reservations/lesson/{self.lesson['id']}",
+            headers={"Authorization": f"Bearer {self.student_token}"},
+            params={
+                "start_time": "2025-07-14T10:00:00",
+                "end_time": "2025-07-14T11:00:00",
+            }
+        ).json()
+        self.app.patch(
+            f"/reservations/tutor/{reservation['id']}",
+            headers={"Authorization": f"Bearer {self.tutor_token}"},
+            json={"status": ReservationStatus.ACCEPTED}
+        )
+        # ACT:
+        blocks = self.app.get(
+            f"/timeblocks/{self.tutor['id']}",
+            params={"on_date": "2025-07-14"}
+        ).json()
+        # ASSERT: only the second block should have been returned,
+        # as there is a reservation during the first one.
+        blocks = [
+            SingleTimeblock.model_validate(b)
+            for b in blocks
+        ]
+        for block in blocks:
+            block.weekday_index = None
+        expected_blocks = [
+            SingleTimeblock.model_validate(self.weekly_timeblocks[1])
+        ]
+        self.assertEqual(blocks, expected_blocks)

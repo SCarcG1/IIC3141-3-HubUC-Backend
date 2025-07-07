@@ -12,8 +12,13 @@ class Reservation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # Foreign keys:
-    private_lesson_id: Mapped[int] = mapped_column(ForeignKey("privatelesson.id"))
-    private_lesson = relationship("PrivateLesson", back_populates="reservations")
+    private_lesson_id: Mapped[int] = mapped_column(
+        ForeignKey("privatelesson.id")
+    )
+    private_lesson = relationship(
+        "PrivateLesson",
+        back_populates="reservations"
+    )
 
     student_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     student = relationship("User", back_populates="reservations")
