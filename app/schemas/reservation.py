@@ -13,8 +13,8 @@ class ReservationStatus(str, Enum):
 
 
 class ReservationBase(BaseModel):
-    private_lesson_id: int
-    student_id: int
+    private_lesson_id: int | None = None
+    student_id: int | None = None
     status: ReservationStatus
     start_time: datetime
     end_time: datetime
@@ -32,8 +32,8 @@ class ReservationOut(ReservationBase):
 
 
 class ReservationExtendedOut(ReservationOut):
-    student: UserOut
-    private_lesson: PrivateLessonExtendedOut
+    student: UserOut | None = None
+    private_lesson: PrivateLessonExtendedOut | None = None
 
 
 class ReservationUpdate(BaseModel):

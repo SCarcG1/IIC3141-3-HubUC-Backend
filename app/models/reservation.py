@@ -20,7 +20,10 @@ class Reservation(Base):
         back_populates="reservations"
     )
 
-    student_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"),
+        nullable=True,
+    )
     student = relationship("User", back_populates="reservations")
 
     # Attributes:
