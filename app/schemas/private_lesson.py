@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class PrivateLessonBase(BaseModel):
-    tutor_id: int | None
+    tutor_id: int
     course_id: int
     price: int
     description: Optional[str] = None
@@ -20,7 +20,7 @@ class PrivateLessonOut(PrivateLessonBase):
 
 class PrivateLessonExtendedOut(PrivateLessonOut):
     course: CourseOut
-    tutor: UserOut | None
+    tutor: UserOut
 
 
 class PrivateLessonCreate(PrivateLessonBase):

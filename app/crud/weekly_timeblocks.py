@@ -1,8 +1,5 @@
 from app.models.weekly_timeblock import WeeklyTimeblock
-from app.schemas.weekly_timeblock import (
-    WeeklyTimeblockCreate,
-    WeeklyTimeblockOut
-)
+from app.schemas.weekly_timeblock import WeeklyTimeblockCreate, WeeklyTimeblockOut
 from app.utilities.weekly_timeblocks import map_int_weekday_to_enum_weekday
 from datetime import date, datetime
 from fastapi import HTTPException
@@ -15,26 +12,7 @@ async def create_weekly_timeblock(
     weekly_timeblock_data: WeeklyTimeblockCreate,
     user_id: int
 ) -> WeeklyTimeblockOut:
-    valid_from = datetime(
-        weekly_timeblock_data.valid_from.year,
-        weekly_timeblock_data.valid_from.month,
-        weekly_timeblock_data.valid_from.day,
-        0, 0, 0
-    )
-    valid_until = datetime(
-        weekly_timeblock_data.valid_until.year,
-        weekly_timeblock_data.valid_until.month,
-        weekly_timeblock_data.valid_until.day,
-        23, 59, 59
-    )
-    weekly_timeblock = WeeklyTimeblock(
-        user_id=user_id,
-        weekday=weekly_timeblock_data.weekday,
-        start_hour=weekly_timeblock_data.start_hour,
-        end_hour=weekly_timeblock_data.end_hour,
-        valid_from=valid_from,
-        valid_until=valid_until
-    )
+    weekly_timeblock = WeeklyTimeblock(**weekly_timeblock_data.model_dump(), user_id=user_id)
     db.add(weekly_timeblock)
     await db.commit()
     await db.refresh(weekly_timeblock)
@@ -64,10 +42,7 @@ async def remove_weekly_timeblock_that_belongs_to_user(
     weekly_timeblock_id: int,
     user_id: int,
 ):
-    weekly_timeblock = await db_session.get(
-        WeeklyTimeblock,
-        weekly_timeblock_id
-    )
+    weekly_timeblock = await db_session.get(WeeklyTimeblock, weekly_timeblock_id)
     if not weekly_timeblock:
         raise HTTPException(
             status_code=404,
@@ -76,10 +51,7 @@ async def remove_weekly_timeblock_that_belongs_to_user(
     if weekly_timeblock.user_id != user_id:
         raise HTTPException(
             status_code=403,
-            detail=(
-                f"Weekly timeblock ID {weekly_timeblock_id} "
-                f"does not belong to user ID {user_id}."
-            )
+            detail=f"Weekly timeblock ID {weekly_timeblock_id} does not belong to user ID {user_id}."
         )
     await db_session.delete(weekly_timeblock)
     await db_session.commit()

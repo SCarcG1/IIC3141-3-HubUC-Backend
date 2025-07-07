@@ -25,49 +25,9 @@ router = APIRouter()
 async def create_lesson(lesson: PrivateLessonCreate, db: AsyncSession = Depends(get_db)):
     return await create_private_lesson(db, lesson)
 
-
-# CREATE
-
-
-@router.post(
-    "/private-lessons",
-    response_model=PrivateLessonOut,
-    dependencies=[Depends(JWTBearer())]
-)
-async def post_lesson(
-    lesson: PrivateLessonCreate,
-    db_session: AsyncSession = Depends(get_db),
-    token: dict = Depends(JWTBearer())
-):
-    crud = PrivateLessonCRUD(db_session)
-    # Ensure that the user is a tutor
-    if token.get("role") != "tutor":
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden: You must be a tutor to create lessons"
-        )
-    # Ensure that the tutor_id is set to the user_id from the token
-    if lesson.tutor_id is None or lesson.tutor_id != (token.get("user_id") or token.get("id")):
-        lesson.tutor_id = token.get("user_id") or token.get("id")
-    return await crud.create(lesson)
-
-
-# READ
-
-
-@router.get(
-    "/private-lessons",
-    response_model=List[PrivateLessonExtendedOut]
-)
-async def read_all_private_lessons(
-    db_session: AsyncSession = Depends(get_db),
-    include_closed_lessons: bool = False
-):
-    crud = PrivateLessonCRUD(db_session)
-    if include_closed_lessons:
-        return await crud.read_all()
-    return await crud.read_open_lessons()
-
+@router.get("/private-lessons", response_model=List[PrivateLessonExtendedOut])
+async def read_all_private_lessons(db: AsyncSession = Depends(get_db)):
+    return await get_all_private_lessons(db)
 
 @router.get("/private-lessons/search", response_model=PrivateLessonPage)
 async def search_private_lessons(
