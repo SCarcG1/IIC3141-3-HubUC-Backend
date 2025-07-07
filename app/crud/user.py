@@ -117,6 +117,7 @@ async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate):
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+
     return db_user
 
 

@@ -1,7 +1,6 @@
 from app.crud.private_lesson import get_private_lesson_by_id
 from app.models.private_lesson import PrivateLesson
 from app.models.reservation import Reservation
-from app.schemas.private_lesson import OfferStatus
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
 from app.utilities.availability import AvailabilityService
 from fastapi import HTTPException
@@ -103,14 +102,7 @@ async def get_all_reservations(db: AsyncSession):
     return result.scalars().all()
 
 async def get_reservation_by_id(db: AsyncSession, reservation_id: int):
-    result = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
-        .options(
-            selectinload(Reservation.student),
-            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.course),
-            selectinload(Reservation.private_lesson).joinedload(PrivateLesson.tutor),
-        )
-    )
+    result = await db.execute(select(Reservation).where(Reservation.id == reservation_id))
     return result.scalar_one_or_none()
 
 async def get_reservation_by_student_id(db: AsyncSession, student_id: int):
